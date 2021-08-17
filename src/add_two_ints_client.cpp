@@ -35,8 +35,8 @@ int main(int argc, char** argv){
 	roslearning::AddTwoInts srv;
 	srv.request.a = atoll(argv[1]); // atoll convents const char* string to long long int
 	srv.request.b = atoll(argv[2]);
-	std::cout << "srv.request.a = " << (long int)srv.request.a << " srv.request.b = " << (long int)srv.request.b << std::endl;
 	
+	// bool ros::ServiceClient::call(<package_name>::<Service Type>& msg_type_obj)
 	if(client.call(srv)){
 		ROS_INFO("[%s] Response recieved, sum = [%ld]", NODE_NAME, (long int)srv.response.sum);
 	}
