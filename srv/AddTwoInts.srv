@@ -1,0 +1,4 @@
+int64 a
+int64 b
+---
+int64 sum	# server returns the sum of a and b
