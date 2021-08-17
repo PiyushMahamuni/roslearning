@@ -202,3 +202,13 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+# add_two_ints_server
+add_executable(add_two_ints_server_cpp src/add_two_ints_server.cpp)
+target_link_libraries(add_two_ints_server_cpp ${catkin_LIBRARIES})
+
+# add_two_ints_client
+add_executable(add_two_ints_client_cpp src/add_two_ints_client.cpp)
+target_link_libraries(add_two_ints_client_cpp ${catkin_LIBRARIES})
+
+
