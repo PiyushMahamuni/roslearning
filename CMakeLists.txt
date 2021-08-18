@@ -211,4 +211,10 @@ target_link_libraries(add_two_ints_server_cpp ${catkin_LIBRARIES})
 add_executable(add_two_ints_client_cpp src/Services/add_two_ints_client.cpp)
 target_link_libraries(add_two_ints_client_cpp ${catkin_LIBRARIES})
 
+# talker
+add_executable(talker src/Topics/talker.cpp)
+target_link_libraries(talker ${catkin_LIBRARIES})
 
+# listener
+add_executable(listener src/Topics/listener.cpp)
+target_link_libraries(listener ${catkin_LIBRARIES})
