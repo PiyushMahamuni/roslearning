@@ -56,6 +56,7 @@ find_package(catkin REQUIRED COMPONENTS
  add_service_files(
    FILES
    AddTwoInts.srv
+   rec_area.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -101,7 +102,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+ INCLUDE_DIRS include
 #  LIBRARIES roslearning
   CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
 #  DEPENDS system_lib
@@ -114,7 +115,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -176,7 +177,7 @@ include_directories(
 #   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
 # )
 
-## Mark cpp header files for installation
+# Mark cpp header files for installation
 # install(DIRECTORY include/${PROJECT_NAME}/
 #   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 #   FILES_MATCHING PATTERN "*.h"
@@ -218,3 +219,11 @@ target_link_libraries(talker ${catkin_LIBRARIES})
 # listener
 add_executable(listener src/Topics/listener.cpp)
 target_link_libraries(listener ${catkin_LIBRARIES})
+
+# rec_area_server
+add_executable(rec_area_server src/Services/rec_area_server.cpp)
+target_link_libraries(rec_area_server ${catkin_LIBRARIES})
+
+# rec _area_client
+add_executable(rec_area_client src/Services/rec_area_client.cpp)
+target_link_libraries(rec_area_client ${catkin_LIBRARIES})
