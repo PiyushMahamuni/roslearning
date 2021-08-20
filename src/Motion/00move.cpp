@@ -20,8 +20,8 @@ const _Float32 LT{0.4};         // Linear threshold
 const _Float32 AT{5 * static_cast<_Float32>(pi_by_4/45.0)}; // 5 degrees in radians
 const _Float32 LLS {1.7};       // limiting linear speed (m/s)
 const _Float32 LAS {pi};      // limiting angular speed (rad/s)
-_Float32 ALS{0.3}; // Treat as const, don't change value on your own
-_Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
+const _Float32 ALS{0.3}; // Treat as const, don't change value on your own
+const _Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
 const _Float32 blink_dur{1.0 / 200};
 const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
 int range_select {};
@@ -167,44 +167,27 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
         }
     }
 
-    // calculate sleep duration
-    bool to_sleep{abs(distance) > LT}; // is required later
-
-    ros::Duration *sleep{nullptr};
-    std::thread *th1{nullptr};
+    // start publishing velocity periodically
+    std::thread th1(pub_vel_periodic);
+    // allow th1 to keep publishing
+    to_pub_vel = true;
     if (abs(distance) > LT)
     {
+        // calculate sleep duration
         float temp = ((abs(distance) - LT) / abs(speed));
-        if (log)
-            std::cout << "Sleeping time: " << temp << std::endl;
-
-        // allow th1 to keep publishing
-        to_pub_vel = true;
-        // start another thread, publishing velocity periodically
-        th1 = new std::thread(pub_vel_periodic);
-        sleep = new ros::Duration(temp);
-    }
-    // start moving robot
-    vel_msg.linear.x = speed;
-    vel_pub.publish(vel_msg);
-    ros::spinOnce();
-
-    if (to_sleep)
-    {
-        if (log)
-            std::cout << "Sleeping..." << std::endl;
-        sleep->sleep();
-        if (log)
-            std::cout << "Awake..." << std::endl;
-    }
-    // slow down if needed
-    if (abs(vel_msg.linear.x) > ALS)
-    {
-        vel_msg.linear.x = (vel_msg.linear.x > 0) ? ALS : -ALS;
-        // reason why you shouldn't change approach speed even though it is not constant
+        ros::Duration sleep{temp};
+        // start moving robot
+        vel_msg.linear.x = speed;
         vel_pub.publish(vel_msg);
         ros::spinOnce();
+        sleep.sleep();
     }
+
+    // Final approach
+    vel_msg.linear.x = (vel_msg.linear.x > 0) ? ALS : -ALS;
+    // reason why you shouldn't change approach speed even though it is not constant
+    vel_pub.publish(vel_msg);
+    ros::spinOnce();
 
     // Decide whether to use x or y cord
     if (abs(cpos.theta) > pi_by_4 && abs(cpos.theta) < 3 * pi_by_4)
@@ -214,16 +197,17 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
         { // if robot is moving to y value greater than y value at start
             while (tpos.y > cpos.y)
             {
-                ros::spinOnce();
                 blink->sleep();
+                ros::spinOnce(); // spinOnce at last since you want to
+                // make decision out of latest information
             }
         }
         else
         {
             while (tpos.y < cpos.y)
             {
-                ros::spinOnce();
                 blink->sleep();
+                ros::spinOnce();
             }
         }
     }
@@ -233,33 +217,29 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
         {
             while (tpos.x > cpos.x)
             {
-                ros::spinOnce();
                 blink->sleep();
+                ros::spinOnce();
             }
         }
         else
         {
             while (tpos.x < cpos.x)
             {
-                ros::spinOnce();
                 blink->sleep();
+                ros::spinOnce();
             }
         }
     }
+    // call to stop_robot automatically make th1 to end its loop and return
     stop_robot();
-    if (log)
-        ROS_INFO("[%s] Stopped Robot, waiting for th1 thread", NODE_NAME);
     // stop velocity publishing through th1s
-    th1->join();
+    th1.join();
     // wait for th1 to join
-
-    delete th1;
     if (log)
     {
         ROS_INFO("[%s] Command completed!", NODE_NAME);
         std::cout << "Current position: x = " << cpos.x << " y = " << cpos.y << std::endl;
     }
-    delete sleep;
     return true;
 }
 

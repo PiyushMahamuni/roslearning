@@ -20,8 +20,8 @@ const _Float32 LT{0.4};         // Linear threshold
 const _Float32 AT{5 * static_cast<_Float32>(pi_by_4/45.0)}; // 5 degrees in radians
 const _Float32 LLS {1.7};       // limiting linear speed (m/s)
 const _Float32 LAS {pi};      // limiting angular speed (rad/s)
-_Float32 ALS{0.3}; // Treat as const, don't change value on your own
-_Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
+const _Float32 ALS{0.3}; // Treat as const, don't change value on your own
+const _Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
 const _Float32 blink_dur{1.0 / 200};
 const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
 int range_select {};
