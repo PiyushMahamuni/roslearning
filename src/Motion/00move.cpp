@@ -13,10 +13,20 @@ const char *VEL_TOPIC{"turtle1/cmd_vel"};
 const char *POSE_TOPIC{"turtle1/pose"};
 #define VEL_PUB_FREQ 20.0
 const _Float32 pi_by_4{0.785398163};
-const _Float32 LT{0.4};
-_Float32 approach_speed{0.3}; // Treat as const, don't change value on your own
+const _Float32 pi_by_2{pi_by_4 * 2};
+const _Float32 pi{pi_by_2 * 2};
+const _Float32 pi_2{pi * 2};
+const _Float32 LT{0.4};         // Linear threshold
+const _Float32 AT{5 * static_cast<_Float32>(pi_by_4/45.0)}; // 5 degrees in radians
+const _Float32 LLS {1.7};       // limiting linear speed (m/s)
+const _Float32 LAS {pi};      // limiting angular speed (rad/s)
+_Float32 ALS{0.3}; // Treat as const, don't change value on your own
+_Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
 const _Float32 blink_dur{1.0 / 200};
 const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
+int range_select {};
+#define PITOPI 0
+#define ZEROTO2PI 1
 
 // GLOBALS
 ros::Publisher vel_pub;
@@ -53,14 +63,27 @@ void pose_sub_callback(const turtlesim::Pose::ConstPtr &msg)
 {
     cpos.x = msg->x;
     cpos.y = msg->y;
-    cpos.theta = msg->theta;
-    // std::cout << "Received message!" << std::endl; // Debug
+    if(range_select == PITOPI)
+        cpos.theta = msg->theta;
+    else
+        cpos.theta = (msg->theta < 0) ? (pi_2 + msg->theta) : msg->theta;
     updated_pose = true;
+}
+
+// wait for update on pose topic
+inline void wait_for_update(){
+    updated_pose = false;
+    while(!updated_pose){
+        blink->sleep();
+        ros::spinOnce();
+    }
+    return;
 }
 
 // function to stop robot
 inline void stop_robot()
 {
+    to_pub_vel = false;
     vel_msg = stop_msg;
     vel_pub.publish(vel_msg);
     ros::spinOnce();
@@ -99,24 +122,24 @@ inline void wrapup()
     delete blink;
 }
 
+
+// MOTION -------------------------------------------------------------------------------------------
 // move function
 bool move(_Float32 distance, _Float32 speed, bool log = false)
 {   
     // make sure that robot is stopped
     stop_robot();
-    if ((speed = abs(speed)) > 1.7)
-    {
-        ROS_INFO("[%s] Requested speed is greater than limiting [%f] speed", NODE_NAME, 1.7);
+    if((speed == abs(speed)) == 0){
+        ROS_ERROR("[%s] Invalid linear speed! Aborting operation", NODE_NAME);
+        return false;
+    }
+    else if(speed > LLS){
+        ROS_INFO("[%s] Requested speed is greater than limiting [%f] speed", NODE_NAME, LLS);
         return false;
     }
     // avoid conflicting speed and distance values
     speed = (distance > 0) ? speed : -speed;
-    updated_pose = false;
-    while (!updated_pose)
-    {
-        ros::spinOnce(); // update cpos
-        blink->sleep();
-    }
+    wait_for_update();
     // calculate tpos, store starting pose
     turtlesim::Pose spos;
     tpos.x = (spos.x = cpos.x) + distance * cos(cpos.theta);
@@ -175,9 +198,9 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
             std::cout << "Awake..." << std::endl;
     }
     // slow down if needed
-    if (abs(vel_msg.linear.x) > approach_speed)
+    if (abs(vel_msg.linear.x) > ALS)
     {
-        vel_msg.linear.x = (vel_msg.linear.x > 0) ? approach_speed : -approach_speed;
+        vel_msg.linear.x = (vel_msg.linear.x > 0) ? ALS : -ALS;
         // reason why you shouldn't change approach speed even though it is not constant
         vel_pub.publish(vel_msg);
         ros::spinOnce();
@@ -226,8 +249,7 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
     stop_robot();
     if (log)
         ROS_INFO("[%s] Stopped Robot, waiting for th1 thread", NODE_NAME);
-    // stop velocity publishing through th1
-    to_pub_vel = false;
+    // stop velocity publishing through th1s
     th1->join();
     // wait for th1 to join
 
@@ -241,6 +263,16 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
     return true;
 }
 
+inline void forward(const _Float32& dist, const _Float32& speed, bool log = false){
+    move(dist, speed, log);
+    return;
+}
+
+inline void backward(const _Float32& dist, const _Float32& speed, bool log = false){
+    move(-dist, speed, false);
+}
+// --------------------------------------------------------------------------------------------------
+
 int main(int argc, char **argv)
 {
     if (argc != 3)
@@ -251,4 +283,5 @@ int main(int argc, char **argv)
     setup(argc, argv);
     move((_Float32)atof(argv[1]), (_Float32)atof(argv[2]), true);
     wrapup();
+    return 0;
 }
