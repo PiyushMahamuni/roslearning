@@ -101,7 +101,9 @@ inline void wrapup()
 
 // move function
 bool move(_Float32 distance, _Float32 speed, bool log = false)
-{
+{   
+    // make sure that robot is stopped
+    stop_robot();
     if ((speed = abs(speed)) > 1.7)
     {
         ROS_INFO("[%s] Requested speed is greater than limiting [%f] speed", NODE_NAME, 1.7);

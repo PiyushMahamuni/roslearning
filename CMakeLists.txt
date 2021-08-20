@@ -229,5 +229,9 @@ add_executable(rec_area_client src/Services/rec_area_client.cpp)
 target_link_libraries(rec_area_client ${catkin_LIBRARIES})
 
 # move [dist] [speed]
-add_executable(move src/Motion/move.cpp)
+add_executable(move src/Motion/00move.cpp)
 target_link_libraries(move ${catkin_LIBRARIES})
+
+# turn [degrees]
+add_executable(turn src/Motion/01turn.cpp)
+target_link_libraries(turn ${catkin_LIBRARIES})
