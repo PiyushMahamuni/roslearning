@@ -4,28 +4,53 @@
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"
 #include <math.h>
+#include <thread>
+#include <chrono>
 
 // CONSTANTS
-const char *NODE_NAME {"turtle_control"};
-const char *VEL_TOPIC {"turtle1/cmd_vel"};
-const char *POSE_TOPIC {"turtle1/pose"};
+const char *NODE_NAME{"turtle_control"};
+const char *VEL_TOPIC{"turtle1/cmd_vel"};
+const char *POSE_TOPIC{"turtle1/pose"};
 #define VEL_PUB_FREQ 20.0
-const _Float32 pi_by_4 {0.785398163};
-const _Float32 LT {0.3};
-const _Float32 approach_speed {0.3};
-const _Float32 blink_dur {1.0/200};
+const _Float32 pi_by_4{0.785398163};
+const _Float32 LT{0.4};
+_Float32 approach_speed{0.3}; // Treat as const, don't change value on your own
+const _Float32 blink_dur{1.0 / 200};
+const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
 
 // GLOBALS
 ros::Publisher vel_pub;
 ros::Subscriber pose_sub;
-ros::SteadyTimer vel_pub_timer;
 turtlesim::Pose cpos, tpos;
 geometry_msgs::Twist vel_msg, stop_msg;
 ros::Duration *blink;
-bool updated_pose {false};
+bool updated_pose{false};
+bool to_pub_vel{false};
+
+// returns true if tpos.theta is out of limits
+bool is_crashing()
+{
+    return tpos.x > xylim2 || tpos.x < xylim1 || tpos.y > xylim2 || tpos.y < xylim1;
+}
+
+// function to call periodically to publish vel_msg on vel_topic
+void pub_vel_periodic()
+{
+    auto loop_idle_time = std::chrono::microseconds(static_cast<long long int>(1000000 * 1.0 / VEL_PUB_FREQ));
+    auto start = std::chrono::high_resolution_clock::now();
+    u_int32_t count{0};
+    while (to_pub_vel)
+    {
+        vel_pub.publish(vel_msg);
+        ros::spinOnce();
+        count++;
+        std::this_thread::sleep_until(start + count * loop_idle_time);
+    }
+}
 
 // pose_sub callback functin
-void pose_sub_callback(const turtlesim::Pose::ConstPtr& msg){
+void pose_sub_callback(const turtlesim::Pose::ConstPtr &msg)
+{
     cpos.x = msg->x;
     cpos.y = msg->y;
     cpos.theta = msg->theta;
@@ -33,22 +58,17 @@ void pose_sub_callback(const turtlesim::Pose::ConstPtr& msg){
     updated_pose = true;
 }
 
-// vel_pub_timer callback function
-void pub_vel(const ros::SteadyTimerEvent& event){
-    vel_pub.publish(vel_msg);
-    ros::spinOnce();
-    std::cout << "Periodically publishing vel!" << std::endl; // debugging
-}
-
 // function to stop robot
-inline void stop_robot(){
+inline void stop_robot()
+{
     vel_msg = stop_msg;
     vel_pub.publish(vel_msg);
     ros::spinOnce();
 }
 
 // setting up this node
-inline void setup(int argc, char **argv){
+inline void setup(int argc, char **argv)
+{
     std::cout << "Setting up node..." << std::endl;
     // Initialize node
     ros::init(argc, argv, NODE_NAME);
@@ -58,8 +78,6 @@ inline void setup(int argc, char **argv){
     pose_sub = node.subscribe(POSE_TOPIC, 10, pose_sub_callback);
     // Initialize vel publisher
     vel_pub = node.advertise<geometry_msgs::Twist>(VEL_TOPIC, 1);
-    // Initialize vel publisher timer
-    vel_pub_timer = node.createSteadyTimer(ros::WallDuration(1.0/VEL_PUB_FREQ), pub_vel, false, false);
     stop_msg.linear.x = 0;
     stop_msg.linear.y = 0;
     stop_msg.linear.z = 0;
@@ -72,104 +90,148 @@ inline void setup(int argc, char **argv){
 }
 
 // wrapping up the node
-inline void wrapup(){
+inline void wrapup()
+{
     // stop robot
     stop_robot();
     // stop all timers
     // delete any Dynamically Allocated Memory
-    vel_pub_timer.stop();
     delete blink;
 }
 
 // move function
-bool move(_Float32 distance, _Float32 speed, bool log = false){
-	// avoid conflicting speed and distance values
-	speed = (distance>0)?abs(speed):-abs(speed);
+bool move(_Float32 distance, _Float32 speed, bool log = false)
+{
+    if ((speed = abs(speed)) > 1.7)
+    {
+        ROS_INFO("[%s] Requested speed is greater than limiting [%f] speed", NODE_NAME, 1.7);
+        return false;
+    }
+    // avoid conflicting speed and distance values
+    speed = (distance > 0) ? speed : -speed;
     updated_pose = false;
-    while(!updated_pose){
-        ros::spinOnce();    // update cpos
+    while (!updated_pose)
+    {
+        ros::spinOnce(); // update cpos
         blink->sleep();
     }
-    // calculate tpos
-    tpos.x = cpos.x + distance * cos(cpos.theta);
-    tpos.y = cpos.y + distance * sin(cpos.theta);
-    if(log){
+    // calculate tpos, store starting pose
+    turtlesim::Pose spos;
+    tpos.x = (spos.x = cpos.x) + distance * cos(cpos.theta);
+    tpos.y = (spos.y = cpos.y) + distance * sin(cpos.theta);
+
+    if (is_crashing())
+    {
+        ROS_INFO("[%s] Invalid Operation, robot will run into wall!", NODE_NAME);
+        return false;
+    }
+
+    if (log)
+    {
         ROS_INFO("[%s] Command recieved to make the robot move through %f distance with %f speed",
-        NODE_NAME, distance, speed);
+                 NODE_NAME, distance, speed);
         std::cout << "Current position: x = " << cpos.x << " y = " << cpos.y << std::endl
                   << "Target position:  x = " << tpos.x << " y = " << tpos.y << std::endl
                   << "Enter any key to continue, Enter abort to abort: ";
         std::string choice;
         std::getline(std::cin, choice);
-        if(choice == "abort"){
+        if (choice == "abort")
+        {
             ROS_INFO("[%s] User aborted the operation!", NODE_NAME);
             return false;
         }
     }
 
-    ros::Duration* sleep {nullptr}; // always initialize pointers that you delete to nullptr
     // calculate sleep duration
-    bool to_sleep {abs(distance) > LT};
-	
-	
-	// BUG - THE PROGRAM SLEEPS HERE FOR INTENDED TIME, BUT THE VEL_PUB_TIMER ALSO BECOMES INEFFECTIVE
-	// AND STOPS PERIODICALLY PUBLISHING VELOCITIES, WITHOUT WHICH THE ROBOT ALSO STOPS AFTER SOME TIME
-	
-	
-	if(to_sleep){
-        float temp = (abs(distance) - LT) / abs(speed);
-        if(log) std::cout << "Sleeping time: " << temp << std::endl;
-        sleep = new ros::Duration{temp};
+    bool to_sleep{abs(distance) > LT}; // is required later
+
+    ros::Duration *sleep{nullptr};
+    std::thread *th1{nullptr};
+    if (abs(distance) > LT)
+    {
+        float temp = ((abs(distance) - LT) / abs(speed));
+        if (log)
+            std::cout << "Sleeping time: " << temp << std::endl;
+
+        // allow th1 to keep publishing
+        to_pub_vel = true;
+        // start another thread, publishing velocity periodically
+        th1 = new std::thread(pub_vel_periodic);
+        sleep = new ros::Duration(temp);
     }
     // start moving robot
     vel_msg.linear.x = speed;
     vel_pub.publish(vel_msg);
     ros::spinOnce();
-    //std::cout << "published message!" << std::endl;
-    // start the vel_pub_timer
-    vel_pub_timer.start();
-    if(to_sleep){
-        if(log) std::cout << "Sleeping..." << std::endl;
+
+    if (to_sleep)
+    {
+        if (log)
+            std::cout << "Sleeping..." << std::endl;
         sleep->sleep();
-        if(log) std::cout << "Awake..." << std::endl;
+        if (log)
+            std::cout << "Awake..." << std::endl;
     }
     // slow down if needed
-    if(vel_msg.linear.x > approach_speed){
-    	vel_msg.linear.x = approach_speed;
-    	vel_pub.publish(vel_msg);
-    	ros::spinOnce();
+    if (abs(vel_msg.linear.x) > approach_speed)
+    {
+        vel_msg.linear.x = (vel_msg.linear.x > 0) ? approach_speed : -approach_speed;
+        // reason why you shouldn't change approach speed even though it is not constant
+        vel_pub.publish(vel_msg);
+        ros::spinOnce();
     }
 
     // Decide whether to use x or y cord
-    if(abs(cpos.theta) > pi_by_4 && abs(cpos.theta) < 3 * pi_by_4){
+    if (abs(cpos.theta) > pi_by_4 && abs(cpos.theta) < 3 * pi_by_4)
+    {
         // use y cord
-        if(tpos.y > cpos.y){
-            while(tpos.y > cpos.y){
-                ros::spinOnce();
-                blink->sleep();
-            }
-        } else {
-            while(tpos.y < cpos.y){
+        if (tpos.y > spos.y)
+        { // if robot is moving to y value greater than y value at start
+            while (tpos.y > cpos.y)
+            {
                 ros::spinOnce();
                 blink->sleep();
             }
         }
-    } else {
-        if(tpos.x > cpos.x){
-            while(tpos.x > cpos.x){
+        else
+        {
+            while (tpos.y < cpos.y)
+            {
                 ros::spinOnce();
                 blink->sleep();
             }
-        } else {
-            while(tpos.x < cpos.x){
+        }
+    }
+    else
+    {
+        if (tpos.x > spos.x)
+        {
+            while (tpos.x > cpos.x)
+            {
+                ros::spinOnce();
+                blink->sleep();
+            }
+        }
+        else
+        {
+            while (tpos.x < cpos.x)
+            {
                 ros::spinOnce();
                 blink->sleep();
             }
         }
     }
     stop_robot();
-    vel_pub_timer.stop();
-    if(log){
+    if (log)
+        ROS_INFO("[%s] Stopped Robot, waiting for th1 thread", NODE_NAME);
+    // stop velocity publishing through th1
+    to_pub_vel = false;
+    th1->join();
+    // wait for th1 to join
+
+    delete th1;
+    if (log)
+    {
         ROS_INFO("[%s] Command completed!", NODE_NAME);
         std::cout << "Current position: x = " << cpos.x << " y = " << cpos.y << std::endl;
     }
@@ -177,8 +239,10 @@ bool move(_Float32 distance, _Float32 speed, bool log = false){
     return true;
 }
 
-int main(int argc, char **argv){
-    if(argc != 3){
+int main(int argc, char **argv)
+{
+    if (argc != 3)
+    {
         std::cout << "Usage: " << argv[0] << " [distance] [speed]" << std::endl;
         return 1;
     }
