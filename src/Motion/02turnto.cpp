@@ -175,6 +175,9 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
         }
     }
 
+    // avoid conflicting speed and radians values
+    speed = (radians > 0)? speed : -speed;
+
     range_select = (tpos.theta > 3 * pi_by_4 || tpos.theta < -3 * pi_by_4) ? ZEROTO2PI : PITOPI;
     if(range_select == ZEROTO2PI){
         // update cpos.theta and tpos.theta to new range
@@ -182,28 +185,28 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
         if(cpos.theta < 0) cpos.theta += pi_2;
     }
 
-    // calculate time to sleep this function
-    bool to_sleep { abs(radians) > AT};
-    
     // start the thread to periodically publish vel_msg
     std::thread th1{pub_vel_periodic};
     to_pub_vel = true;
-    if(to_sleep){
-        // TODO
+    if(abs(radians) > AT){
         float sleep_time {(abs(radians) - AT)/abs(speed)};
         ros::Duration sleep{sleep_time};
         // Start turning the robot
-        vel_msg.angular.z = (radians > 0) ? speed : -speed;
+        vel_msg.angular.z = speed;
         vel_pub.publish(vel_msg);
         ros::spinOnce();
         sleep.sleep();  // turn radians - at angle withtou any feedback
     }
     // Final Moments
     // slow down for precision
-    if(abs(vel_msg.angular.z) > AAS){
-        vel_msg.angular.z = (radians > 0) ? AAS : -AAS;
-    } else {
-        vel_msg.angular.z = (radians > 0) ? speed : -speed;
+    if(speed > AAS){
+        vel_msg.angular.z = AAS;
+    }
+    else if(speed < -AAS){
+        vel_msg.angular.z = -AAS;
+    }
+    else{
+        vel_msg.angular.z = speed;
     }
     vel_pub.publish(vel_msg);
     ros::spinOnce();
