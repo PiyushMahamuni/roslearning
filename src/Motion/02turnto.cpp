@@ -24,11 +24,14 @@ const _Float32 ALS{0.3}; // Treat as const, don't change value on your own
 const _Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
 const _Float32 blink_dur{1.0 / 200};
 const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
-int range_select {};
+const _Float32 RTDF {(_Float32)(45/pi_by_4)};   // radians to degrees conversion factor
+const _Float32 DTRF {1/RTDF};                   // degrees to radians conversinon factor
+
 #define PITOPI 0
 #define ZEROTO2PI 1
 
 // GLOBALS
+int range_select {};
 ros::Publisher vel_pub;
 ros::Subscriber pose_sub;
 turtlesim::Pose cpos, tpos;
@@ -138,6 +141,9 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
         ROS_ERROR("[%s] Angular speed can't be greater than %f rad/s", NODE_NAME, LAS);
         std::cerr << "Speed given: " << speed << std::endl;
         return;
+    } else if(radians == 0){
+        ROS_INFO("[%s] turn angle is 0!", NODE_NAME);
+        return;
     }
 
     // wait for new updated
@@ -178,7 +184,6 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
 
     // calculate time to sleep this function
     bool to_sleep { abs(radians) > AT};
-    ros::Duration *sleep {nullptr};
     
     // start the thread to periodically publish vel_msg
     std::thread th1{pub_vel_periodic};
@@ -186,20 +191,22 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
     if(to_sleep){
         // TODO
         float sleep_time {(abs(radians) - AT)/abs(speed)};
-        sleep = new ros::Duration(sleep_time);
+        ros::Duration sleep{sleep_time};
         // Start turning the robot
         vel_msg.angular.z = (radians > 0) ? speed : -speed;
         vel_pub.publish(vel_msg);
         ros::spinOnce();
-        sleep->sleep();  // turn radians - at angle withtou any feedback
+        sleep.sleep();  // turn radians - at angle withtou any feedback
     }
     // Final Moments
     // slow down for precision
     if(abs(vel_msg.angular.z) > AAS){
         vel_msg.angular.z = (radians > 0) ? AAS : -AAS;
-        vel_pub.publish(vel_msg);
-        ros::spinOnce();
+    } else {
+        vel_msg.angular.z = (radians > 0) ? speed : -speed;
     }
+    vel_pub.publish(vel_msg);
+    ros::spinOnce();
     if(radians > 0){ // Turn counter clockwise
         // WHEN cpos.theta first becomes less that tpos.theta and then
         // becomes greater that tpos.theta, that's when the robot should stop
@@ -215,7 +222,6 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
     }
     stop_robot();
     th1.join();
-    delete sleep;
     range_select = PITOPI;  // restore to default range;
     if(log){
         wait_for_update();
@@ -224,17 +230,54 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
     }
     return;
 }
+
+// turns to specific angle in radians
+void turntor(_Float32 radians, _Float32 speed, bool log = false){
+    stop_robot();
+    wait_for_update();
+    if(log){
+        // calculate tpos.theta
+        tpos.theta = radians;
+        while(tpos.theta > pi) tpos.theta -= pi_2;
+        while(tpos.theta < -pi) tpos.theta += pi_2;
+        ROS_INFO("[%s] Command Recieved to make the robot turn to %f radians with %f rad/s speed",
+        NODE_NAME, radians, speed);
+        std::cout << "Current theta: " << cpos.theta << " Target theta: " << tpos.theta << std::endl
+                  << "Enter abort to abort, any key to continue: ";
+        std::string choice;
+        std::getline(std::cin, choice);
+        if(choice == "abort"){
+            ROS_INFO("[%s] Operation aborted by User!", NODE_NAME);
+            return;
+        }
+    }
+    radians -= cpos.theta;
+    while(radians > pi) radians -= pi_2;
+    while(radians < -pi) radians += pi_2;
+    turn(radians, speed);
+    if(log){
+        ROS_INFO("[%s] turntor Command completed!", NODE_NAME);
+        std::cout << "Current theta: " << cpos.theta << std::endl;
+    }
+    return;
+}
+
+// turn to specific angle in degrees
+inline void turntod(const _Float32& angle, const _Float32& speed, bool log = false){
+    turntor(angle*DTRF, speed*DTRF, log);
+    return;
+}
 // --------------------------------------------------------------------------------------------------
 
 int main(int argc, char **argv)
 {
     if (argc != 3)
     {
-        std::cout << "Usage: " << argv[0] << " [degrees] [speed]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " [degree target] [speed]" << std::endl;
         return 1;
     }
     setup(argc, argv);
-    turn((_Float32)(atof(argv[1])*pi_by_4/45), (_Float32)(atof(argv[2])*pi_by_4/45), true);
+    turntod(atof(argv[1]), atof(argv[2]), true);
     wrapup();
     return 0;
 }

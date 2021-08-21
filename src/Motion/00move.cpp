@@ -16,11 +16,11 @@ const _Float32 pi_by_4{0.785398163};
 const _Float32 pi_by_2{pi_by_4 * 2};
 const _Float32 pi{pi_by_2 * 2};
 const _Float32 pi_2{pi * 2};
-const _Float32 LT{0.4};         // Linear threshold
+const _Float32 LT{0.5};         // Linear threshold
 const _Float32 AT{5 * static_cast<_Float32>(pi_by_4/45.0)}; // 5 degrees in radians
 const _Float32 LLS {1.7};       // limiting linear speed (m/s)
 const _Float32 LAS {pi};      // limiting angular speed (rad/s)
-const _Float32 ALS{0.3}; // Treat as const, don't change value on your own
+const _Float32 ALS {0.2}; // Treat as const, don't change value on your own
 const _Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
 const _Float32 blink_dur{1.0 / 200};
 const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
@@ -129,7 +129,7 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
 {   
     // make sure that robot is stopped
     stop_robot();
-    if((speed == abs(speed)) == 0){
+    if((speed = abs(speed)) == 0){
         ROS_ERROR("[%s] Invalid linear speed! Aborting operation", NODE_NAME);
         return false;
     }
@@ -137,8 +137,10 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
         ROS_INFO("[%s] Requested speed is greater than limiting [%f] speed", NODE_NAME, LLS);
         return false;
     }
-    // avoid conflicting speed and distance values
-    speed = (distance > 0) ? speed : -speed;
+    else if(distance == 0){
+        ROS_INFO("[%s] distance to move through is 0!", NODE_NAME);
+        return true;
+    }
     wait_for_update();
     // calculate tpos, store starting pose
     turtlesim::Pose spos;
@@ -166,11 +168,13 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
             return false;
         }
     }
+    // avoid conflicting speed and distance values
+    speed = (distance > 0) ? speed : -speed;
 
-    // start publishing velocity periodically
-    std::thread th1(pub_vel_periodic);
     // allow th1 to keep publishing
     to_pub_vel = true;
+    // start publishing velocity periodically
+    std::thread th1(pub_vel_periodic);
     if (abs(distance) > LT)
     {
         // calculate sleep duration
@@ -182,10 +186,17 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
         ros::spinOnce();
         sleep.sleep();
     }
-
     // Final approach
-    vel_msg.linear.x = (vel_msg.linear.x > 0) ? ALS : -ALS;
-    // reason why you shouldn't change approach speed even though it is not constant
+    if(speed > ALS){  // ALS is approaching linear speed
+        vel_msg.linear.x = ALS;
+    }
+    else if(speed < -ALS){
+        vel_msg.linear.x = -ALS;
+    }
+    else{
+        vel_msg.linear.x = speed;
+    }
+    
     vel_pub.publish(vel_msg);
     ros::spinOnce();
 
@@ -198,8 +209,7 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
             while (tpos.y > cpos.y)
             {
                 blink->sleep();
-                ros::spinOnce(); // spinOnce at last since you want to
-                // make decision out of latest information
+                ros::spinOnce();
             }
         }
         else
@@ -237,7 +247,7 @@ bool move(_Float32 distance, _Float32 speed, bool log = false)
     // wait for th1 to join
     if (log)
     {
-        ROS_INFO("[%s] Command completed!", NODE_NAME);
+        ROS_INFO("[%s] move Command completed!", NODE_NAME);
         std::cout << "Current position: x = " << cpos.x << " y = " << cpos.y << std::endl;
     }
     return true;
