@@ -15,7 +15,7 @@ const _Float32 pi_2{pi * 2};
 const _Float32 AT {(_Float32) (1 * pi_by_4 / 45)};
 #define PITOPI 0
 #define ZEROTOPI 1
-#define PUB_VEL_FREQ 20
+
 
 // Global
 ros::Publisher vel_pub;
@@ -35,17 +35,6 @@ void pose_callback(const turtlesim::Pose::ConstPtr& msg){
     if(range_select == PITOPI)  cpos.theta = msg->theta;
     else cpos.theta = (msg->theta > 0) ? msg->theta : msg->theta + pi_2;
     pose_updated = true;
-}
-
-// function will be opened in new thread to periodically publish velocity
-void pub_vel_periodic(){
-    ros::Rate loop_rate{PUB_VEL_FREQ};
-    while(to_pub_vel){
-        vel_pub.publish(vel_msg);
-        ros::spinOnce();
-        loop_rate.sleep();
-    }
-    return;
 }
 
 // function to stop robot and thread running pub_vel_periodic()
