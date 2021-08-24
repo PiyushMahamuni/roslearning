@@ -229,13 +229,17 @@ add_executable(rec_area_client src/Services/rec_area_client.cpp)
 target_link_libraries(rec_area_client ${catkin_LIBRARIES})
 
 # move [dist] [speed]
-add_executable(move src/Motion/00move.cpp)
+add_executable(move src/Motion/Expert/00move.cpp)
 target_link_libraries(move ${catkin_LIBRARIES})
 
 # turn [degrees]
-add_executable(turn src/Motion/01turn.cpp)
+add_executable(turn src/Motion/Expert/01turn.cpp)
 target_link_libraries(turn ${catkin_LIBRARIES})
 
 # turnto [degrees]
-add_executable(turnto src/Motion/02turnto.cpp)
+add_executable(turnto src/Motion/Expert/02turnto.cpp)
 target_link_libraries(turnto ${catkin_LIBRARIES})
+
+# goto [x, y, angle]
+add_executable(goto src/Motion/Naive/00goto.cpp)
+target_link_libraries(goto ${catkin_LIBRARIES})
