@@ -240,6 +240,6 @@ target_link_libraries(turn ${catkin_LIBRARIES})
 add_executable(turnto src/Motion/Expert/02turnto.cpp)
 target_link_libraries(turnto ${catkin_LIBRARIES})
 
-# goto [x, y, angle]
+# goto [x, y, kpd, kpa]
 add_executable(goto src/Motion/Naive/00goto.cpp)
 target_link_libraries(goto ${catkin_LIBRARIES})
