@@ -100,11 +100,11 @@ bool goto_goal(turtlesim::Pose tpos, _Float32 kpd, _Float32 kpa, bool log = fals
             else
                 angleE = pi - angleE;
         }
-        std::cout << "tpos angle = " << angleE << '\n';
+        // std::cout << "tpos angle = " << angleE << '\n';
         angleE -= cpos.theta;
         if(angleE < -pi) angleE += pi_2;
         else if(angleE > pi) angleE -= pi_2;
-        std::cout << "angleE = " << angleE << '\n';
+        // std::cout << "angleE = " << angleE << '\n';
         vel_msg.linear.x = kpd * distE;
         vel_msg.angular.z = kpa * angleE;
         vel_pub.publish(vel_msg);
