@@ -240,6 +240,12 @@ target_link_libraries(turn ${catkin_LIBRARIES})
 add_executable(turnto src/Motion/Expert/02turnto.cpp)
 target_link_libraries(turnto ${catkin_LIBRARIES})
 
-# goto [x, y, kpd, kpa]
-add_executable(goto src/Motion/Naive/00goto.cpp)
+# gotoN [x, y, kpd, kpa]
+add_executable(gotoN src/Motion/Naive/00goto.cpp) # N for naive approach
+target_link_libraries(gotoN ${catkin_LIBRARIES})
+
+# goto [x, y, kpd, kpa, kid, kia, kdd, kda / or recommended to use recommended values]
+add_executable(goto src/Motion/Expert/03goto.cpp)
 target_link_libraries(goto ${catkin_LIBRARIES})
+
+
