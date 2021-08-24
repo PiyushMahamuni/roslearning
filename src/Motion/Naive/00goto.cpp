@@ -69,15 +69,11 @@ void wait_for_update(){
 bool goto_goal(turtlesim::Pose tpos, _Float32 kpd, _Float32 kpa, bool log = false){
     stop_robot();
     wait_for_update();
-    // calculate tpos.theta
-    tpos.theta = (_Float32)atan2(tpos.y - cpos.y, tpos.x - cpos.x);
     if(log){
         ROS_INFO("[%s] Command recieved, goto %f %f %f", NODE_NAME,
         tpos.x, tpos.y, tpos.theta);
         std::cout << "Current pos:\n"
-                  << "x = " << cpos.x << " y = " << cpos.y << " theta = " << cpos.theta << '\n'
-                  << "Target pos:\n"
-                  << "x = " << tpos.x << " y = " << tpos.y << " theta = " << tpos.theta << '\n'
+                  << "x = " << cpos.x << " y = " << cpos.y << '\n'
                   << "Enter any key to continue, abort to abort: ";
         std::string choice;
         std::getline(std::cin, choice);
@@ -86,7 +82,7 @@ bool goto_goal(turtlesim::Pose tpos, _Float32 kpd, _Float32 kpa, bool log = fals
             return false;
         }
     }
-    // publish message at 20 Hz per second
+    // publish message at 50 Hz per second
     ros::Rate loop_rate{50};
     _Float32 xE, yE, distE, angleE; // proportionality gain distance and angle
     do{
