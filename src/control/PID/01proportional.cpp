@@ -36,10 +36,16 @@ void waitPoseUpdate();
 int main(int argc, char** argv){
     if(argc != 4){
         std::cerr << "Usage: " << argv[0] << " [x, m, kpd]\n";
+        std::cout << "Info -------------------------" << std::endl
+        << "This program works along with turtlesim_node, emulating that robot has\n"
+        << "Given mass `m` it implements a proportional cotroller whose output is a `force`\n"
+        << "Which is imparted on body of robot to make it move\n"
+        << "Note, this program doesn't take in account the angle of robot and assumes it is at 0 rad\n";
+        
         return 1;
     }
     setup(argc, argv);
-    pLineController((_Float32)atof(argv[1]), (_Float32)atof(argv[3]), (_Float32)atof(argv[2]), false);
+    pLineController((_Float32)atof(argv[1]), (_Float32)atof(argv[3]), (_Float32)atof(argv[2]), true);
     return 0;
 }
 
