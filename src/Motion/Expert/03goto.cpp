@@ -96,7 +96,6 @@ bool goto_goal(turtlesim::Pose tpos, _Float32 kpd, _Float32 kpa, _Float32 kid,
         yE = tpos.y - cpos.y;
         distE = (_Float32)sqrt(xE * xE + yE * yE);
         angleE = asin(yE/distE);
-        distE *= cos(angleE);
         if(tpos.x < cpos.x){
             if(angleE < 0)
                 angleE = -pi -angleE;
@@ -107,8 +106,11 @@ bool goto_goal(turtlesim::Pose tpos, _Float32 kpd, _Float32 kpa, _Float32 kid,
         if(angleE < -pi) angleE += pi_2;
         else if(angleE > pi) angleE -= pi_2;
 
-        ICd += kid * distE; // integral controller
-        ICa += kia * angleE;
+        // kick in integral control in last part of approach
+        if(distE < 1)
+        ICd += (kid * distE * cos(angleE)); // integral controller
+        if(angleE < 5 * pi_by_4 / 45)
+        ICa += (kia * angleE);
         // capping integral controllers to they don't go out of control
         if(ICd > 2) ICd = 2;
         else if(ICd < -2) ICd = -2;
@@ -124,7 +126,9 @@ bool goto_goal(turtlesim::Pose tpos, _Float32 kpd, _Float32 kpa, _Float32 kid,
         // PI controller, the robot wouldn's slow down as much in final moments of approach
         // as a stable P controller would
         vel_msg.linear.x = kpd * distE + ICd + kdd * (distE - distEp);
-        vel_msg.angular.z = kpa * angleE + ICa + kda * (angleE - angleEp);
+        vel_msg.angular.z = kpa * angleE + ICa + kda * (angleEp - angleE);
+        // angleEp - angleE since we want to oppose rapid change in error as you are approaching
+        // your needed anglur orientation
         distEp = distE;
         angleEp = angleE;
         vel_pub.publish(vel_msg);
