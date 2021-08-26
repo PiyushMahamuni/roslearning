@@ -26,26 +26,27 @@ ros::Rate* blink{nullptr};   // blinking (short idle) duration
 inline void setup(int argc, char** argv);
 // callback function for pose_sub
 void pose_callback(const turtlesim::Pose::ConstPtr& msg);
-// function implementing integral linear controller
-void iLineController(_Float32 x, _Float32 kid, _Float32 m, bool log = false);
+// function implementing proportional-derivative linear controller
+void pdLineController(_Float32 x, _Float32 kpd, _Float32 kdd, _Float32 m, bool log = false);
 // stops the turtlebot
 void stop_robot();
 // wait for pose updated
 void waitPoseUpdate();
 
 int main(int argc, char** argv){
-    if(argc != 4){
-        std::cerr << "Usage: " << argv[0] << " [x, m, kpd]\n";
+    if(argc != 5){
+        std::cerr << "Usage: " << argv[0] << " [x, m, kpd, kdd]\n";
         std::cout << "Info -------------------------" << std::endl
         << "This program works along with turtlesim_node, emulating that robot has\n"
-        << "Given mass `m` it implements a integral cotroller whose output is a `force`\n"
+        << "Given mass `m` it implements a proportional-derrivative cotroller whose output is a `force`\n"
         << "Which is imparted on body of robot to make it move\n"
         << "Note, this program doesn't take in account the angle of robot and assumes it is at 0 rad\n";
         
         return 1;
     }
     setup(argc, argv);
-    iLineController((_Float32)atof(argv[1]), (_Float32)atof(argv[3]), (_Float32)atof(argv[2]), true);
+    pdLineController((_Float32)atof(argv[1]), (_Float32)atof(argv[3]), 
+                     (_Float32)atof(argv[4]), (_Float32)atof(argv[2]), true);
     return 0;
 }
 
@@ -75,35 +76,42 @@ void pose_callback(const turtlesim::Pose::ConstPtr& msg){
     return;
 }
 
-// function implementing integral linear controller
+// function implementing proportional-derivative linear controller
 // log is default parameter having false value
-void iLineController(_Float32 x, _Float32 kid, _Float32 m, bool log){
+void pdLineController(_Float32 x, _Float32 kpd, _Float32 kdd, _Float32 m, bool log){
     // this controls the force acted on robot, not velocity of robot
     stop_robot();
     waitPoseUpdate();
     ros::Rate ControllerRate {controllerFreq};
     _Float32 loop_dur {(_Float32)ControllerRate.expectedCycleTime().toSec()};
     x = abs(x);
+    kdd /= loop_dur;
+    _Float32 dx {x - cpos.x}, dxp {dx}, pv{0}, cv{}, K{loop_dur/(2*m)},
+    force{}; // prev velocity, current velocity
 
     // playground
-    /*  cforce = 0
-        pv = 0
-        loop ----
-        dforce = kid * dx
-        cforce += dforce;
-        cv = cforce / (2 * m) * loop_dur
-        vel_msg.linear.x = (pv + cv)
-        pv = cv
-
+    /*
+        kdd /= loop_dur
+        dxp = dx;
+        loop -------
+        dx = x - cpos.x;
+        force = kpd * dx;
+        force += kdd * (dx - dxp); // proportional to rate of change of error
+        cv = force / (2 * m) * loop_dur;
+        vel_msg.linear.x += cv + pv;
+        pv = cv;
+        dxp = dx;
+        vel_pub.publish(vel_msg);
+        ros::spinOnce();
+        ~loop
     */
     // ~playground
-    _Float32 dx {x - cpos.x}, pv{0}, cv{}, 
-             force{}, K{loop_dur/(2*m)}; // prev velocity, current velocity
     do{
-        force += kid * dx;
+        force = kpd * dx + kdd * (dx - dxp);
         cv = force * K;
         vel_msg.linear.x += (pv + cv);
         pv = cv;
+        dxp = dx;
         vel_pub.publish(vel_msg);
         blink->sleep();
         ros::spinOnce();
