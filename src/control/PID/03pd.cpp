@@ -78,45 +78,66 @@ void pose_callback(const turtlesim::Pose::ConstPtr& msg){
 
 // function implementing proportional-derivative linear controller
 // log is default parameter having false value
-void pdLineController(_Float32 x, _Float32 kpd, _Float32 kdd, _Float32 m, bool log){
+void pdLineController(_Float32 x0, _Float32 kpd, _Float32 kdd, _Float32 m, bool log){
     // this controls the force acted on robot, not velocity of robot
     stop_robot();
     waitPoseUpdate();
+    if(log){
+        ROS_INFO("[%s] Command recieved for Linear PD control");
+        std::cout << "m = " << m << " x0 = " << x0 << " kpd = " << kpd << " kdd = " << kdd << '\n'
+                  << "Enter any key to continue, abort to abort: ";
+        std::string choice;
+        std::getline(std::cin, choice);
+        if(choice == "abort"){
+            ROS_INFO("[%s] Command aborted by user!");
+            return;
+        }
+        std::cout << "Enter ctrl+c to stop the controller!\n";
+    }
     ros::Rate ControllerRate {controllerFreq};
     _Float32 loop_dur {(_Float32)ControllerRate.expectedCycleTime().toSec()};
-    x = abs(x);
+    x0 = abs(x0); // there aren't any -ve x values on screen of turtlesim simulator
     kdd /= loop_dur;
-    _Float32 dx {x - cpos.x}, dxp {dx}, pv{0}, cv{}, K{loop_dur/(2*m)},
+    _Float32 _s2 {x0 - cpos.x}, _s1 {_s2}, pv{0}, cv{}, K{loop_dur/(2*m)},
     force{}; // prev velocity, current velocity
 
     // playground
     /*
-        kdd /= loop_dur
-        dxp = dx;
-        loop -------
-        dx = x - cpos.x;
-        force = kpd * dx;
-        force += kdd * (dx - dxp); // proportional to rate of change of error
-        cv = force / (2 * m) * loop_dur;
-        vel_msg.linear.x += cv + pv;
-        pv = cv;
-        dxp = dx;
-        vel_pub.publish(vel_msg);
-        ros::spinOnce();
-        ~loop
+        Let s be the relative displacement of robot w.r.t. target/desired location/point
+        let x0 be the desired value, x be the current position
+        relative displacement s = x - x0 = error
+        Proportional controller cats like spring,
+        restoring force fp = -Kp * s; // NEGATIVELY PROPORTIONAL SINCE IT OPPOSES DISPLACEMENT
+        fp = Kp * (x0 - x);
+        // restoring force acts in opposite direction to that of displacement
+        let s1 be a displacement at time t1, s2 at time t2=t1+dt
+        ds = s2 - s1
+        avg velocity v = ds/dt = rate of change of error
+        Derrivative controller acts like dampner, opposing velocity
+        fd = -Kd * v;
+        fd = Kd (s1 - s2)/ dt;
+        if dt is const, Kd = Kd2
+        fd = Kd2 (s1 - s2);
+        Use suffix 2 for all current values, suffix 1 for all previous values
+        let -s be _s = x0 - x
+        f = fp + fd
+          = -Kp * s2 + (-Kd v2)
+          = Kp * (_s2) + Kd2 (s1 - s2)
+          = Kp * (_s2) + kd2 (_s2 - _s1)
     */
     // ~playground
     do{
-        force = kpd * dx + kdd * (dx - dxp);
+        force = kpd * _s2 + kdd * (_s2 - _s1);
         cv = force * K;
         vel_msg.linear.x += (pv + cv);
         pv = cv;
-        dxp = dx;
+        _s1 = _s2;
         vel_pub.publish(vel_msg);
         blink->sleep();
         ros::spinOnce();
-        dx = x - cpos.x;
+        _s2 = x0 - cpos.x;
     }while(ros::ok());
+    if(log) ROS_INFO("[%s] PD Linear Controller stopped!");
     return;
 }
 
