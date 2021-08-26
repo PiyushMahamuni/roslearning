@@ -83,7 +83,7 @@ void pdLineController(_Float32 x0, _Float32 kpd, _Float32 kdd, _Float32 m, bool 
     stop_robot();
     waitPoseUpdate();
     if(log){
-        ROS_INFO("[%s] Command recieved for Linear PD control");
+        ROS_INFO("[%s] Command recieved for Linear PD control", NODE_NAME);
         std::cout << "m = " << m << " x0 = " << x0 << " kpd = " << kpd << " kdd = " << kdd << '\n'
                   << "Enter any key to continue, abort to abort: ";
         std::string choice;
@@ -137,7 +137,7 @@ void pdLineController(_Float32 x0, _Float32 kpd, _Float32 kdd, _Float32 m, bool 
         ros::spinOnce();
         _s2 = x0 - cpos.x;
     }while(ros::ok());
-    if(log) ROS_INFO("[%s] PD Linear Controller stopped!");
+    if(log) ROS_INFO("[%s] PD Linear Controller stopped!", NODE_NAME);
     return;
 }
 
