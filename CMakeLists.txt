@@ -248,6 +248,10 @@ target_link_libraries(gotoN ${catkin_LIBRARIES})
 add_executable(goto src/Motion/Expert/03goto.cpp)
 target_link_libraries(goto ${catkin_LIBRARIES})
 
-# pLinController [x, y, kpd] // linear
+# pLinController [x, m, kpd] // linear
 add_executable(pLinController src/control/PID/01proportional.cpp)
 target_link_libraries(pLinController ${catkin_LIBRARIES})
+
+# iLinController [x, m, kid] // linear
+add_executable(iLinController src/control/PID/02integral.cpp)
+target_link_libraries(iLinController ${catkin_LIBRARIES})
