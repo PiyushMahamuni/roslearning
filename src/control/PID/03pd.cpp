@@ -89,7 +89,7 @@ void pdLineController(_Float32 x0, _Float32 kpd, _Float32 kdd, _Float32 m, bool 
         std::string choice;
         std::getline(std::cin, choice);
         if(choice == "abort"){
-            ROS_INFO("[%s] Command aborted by user!");
+            ROS_INFO("[%s] Command aborted by user!", NODE_NAME);
             return;
         }
         std::cout << "Enter ctrl+c to stop the controller!\n";
