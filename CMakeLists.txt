@@ -263,3 +263,7 @@ target_link_libraries(pdLinController ${catkin_LIBRARIES})
 # idLinController [x, m, kpd, kid] // linear
 add_executable(idLinController src/control/PID/04id.cpp)
 target_link_libraries(idLinController ${catkin_LIBRARIES})
+
+# pidLinController [x, m, kpd, kid, pdd] // linear
+add_executable(pidLinController src/control/PID/05pid.cpp)
+target_link_libraries(pidLinController ${catkin_LIBRARIES})
