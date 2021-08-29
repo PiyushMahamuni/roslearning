@@ -45,7 +45,7 @@ def turn(radians: float, speed: float, log: bool = False) -> bool:
     loop_freq = 20
     loop_rate = rospy.Rate(loop_freq)
     loop_count = 20 * abs(radians) // abs(speed)
-    rem_time = radians/speed - radians // speed
+    rem_time = abs(radians)/abs(speed) - abs(radians) // abs(speed)
     if log:
         rospy.loginfo(f"[{NODE_NAME}] Command recieved to make the robot turn {radians} radians\n with {speed} radians/second speed")
         choice = input("Enter any key to continue, enter abort to abort command: ")
