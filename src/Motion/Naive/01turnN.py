@@ -44,8 +44,17 @@ def turn(radians: float, speed: float, log: bool = False) -> bool:
     # calculate target theta
     loop_freq = 20
     loop_rate = rospy.Rate(loop_freq)
-    loop_count = 20 * abs(radians) // abs(speed)
-    rem_time = abs(radians)/abs(speed) - abs(radians) // abs(speed)
+    loop_dur = loop_freq ** -1
+    cclk = True if radians > 0 else False
+    radians = abs(radians)
+    speed = abs(speed)
+    total_time = radians / speed
+    loop_count = 0
+    while loop_count * loop_dur < total_time:
+        loop_count += 1
+    loop_count -= 1
+    rem_time = total_time - loop_count * loop_dur
+    speed = speed if cclk else -speed
     if log:
         rospy.loginfo(f"[{NODE_NAME}] Command recieved to make the robot turn {radians} radians\n with {speed} radians/second speed")
         choice = input("Enter any key to continue, enter abort to abort command: ")
@@ -53,7 +62,7 @@ def turn(radians: float, speed: float, log: bool = False) -> bool:
             rospy.loginfo(f"[{NODE_NAME}] Command aborted by user!")
             return None
     vel_msg = Twist()
-    vel_msg.angular.z = abs(speed) if radians > 0 else -abs(speed)
+    vel_msg.angular.z = speed
     while loop_count:
         vel_pub.publish(vel_msg)
         loop_count -= 1
