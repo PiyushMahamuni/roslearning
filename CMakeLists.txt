@@ -241,7 +241,7 @@ add_executable(turnto src/Motion/Expert/02turnto.cpp)
 target_link_libraries(turnto ${catkin_LIBRARIES})
 
 # gotoN [x, y, kpd, kpa]
-add_executable(gotoN src/Motion/Naive/00goto.cpp) # N for naive approach
+add_executable(gotoN src/Motion/Naive/03gotoN.cpp) # N for naive approach
 target_link_libraries(gotoN ${catkin_LIBRARIES})
 
 # goto [x, y, kpd, kpa, kid, kia, kdd, kda / or recommended to use recommended values]
