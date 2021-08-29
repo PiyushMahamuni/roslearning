@@ -46,6 +46,12 @@ def turn(radians: float, speed: float, log: bool = False) -> bool:
     loop_rate = rospy.Rate(loop_freq)
     loop_count = 20 * abs(radians) // abs(speed)
     rem_time = radians/speed - radians // speed
+    if log:
+        rospy.loginfo(f"[{NODE_NAME}] Command recieved to make the robot turn {radians} radians\n with {speed} radians/second speed")
+        choice = input("Enter any key to continue, enter abort to abort command: ")
+        if choice == "abort":
+            rospy.loginfo(f"[{NODE_NAME}] Command aborted by user!")
+            return None
     vel_msg = Twist()
     vel_msg.angular.z = abs(speed) if radians > 0 else -abs(speed)
     while loop_count:
@@ -55,6 +61,8 @@ def turn(radians: float, speed: float, log: bool = False) -> bool:
     vel_pub.publish(vel_msg)
     time.sleep(rem_time)
     stop_robot()
+    if log:
+        rospy.loginfo(f"[{NODE_NAME}] Turn command completed!")
 
 
 if __name__ == "__main__":
@@ -63,4 +71,4 @@ if __name__ == "__main__":
         print(usage)
         sys.exit(1)
     setup()
-    turn(float(sys.argv[1]) * DTRF, float(sys.argv[2]) * DTRF, False)
+    turn(float(sys.argv[1]) * DTRF, float(sys.argv[2]) * DTRF, True)
