@@ -11,7 +11,6 @@ POSE_TOPIC = "turtle1/pose"
 DTRF = math.pi / 180  # degree to radian factor
 
 # GLOBALS
-vel_msg = Twist()
 vel_pub = None
 pose_sub = None
 cpos = None  # to save current position
