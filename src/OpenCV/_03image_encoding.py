@@ -75,7 +75,7 @@ def main():
     # this conversion is very useful and used oftenly since it is very easy to
     # process a greyscale single channel image than to process 3 channel rgb channels all
     # encoding different features within them
-    
+
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
