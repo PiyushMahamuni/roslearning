@@ -2,7 +2,7 @@
 
 # run this scritp along with _06Briding_openCV_ROS.py from this package
 
-import rospy, cv2
+import rospy, cv2, time
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 
@@ -17,18 +17,24 @@ bridge = CvBridge()
 def main():
     rospy.init_node(NODE_NAME)
     global image_pub
-    image_pub = rospy.Publisher(IMAGE_TOPIC, Image)
+    image_pub = rospy.Publisher(IMAGE_TOPIC, Image, queue_size=1)
 
     # attach the webcam's video feed to image_feed object
     image_feed = cv2.VideoCapture(0)
 
-    frame_rate = 1000 // 60
+    frame_rate = rospy.Rate(30)
     while not rospy.is_shutdown():
         ret, frame = image_feed.read()
 
-        frame = bridge.cv2_to_imgmsg(frame[:, -1::-1, :], encoding="bgr8")
-        # mirroring the frame
+        try:
+            frame = bridge.cv2_to_imgmsg(frame[:, -1::-1, :], encoding="bgr8")
+            # mirroring the frame
+        except CvBridgeError as e:
+            print(e)
         image_pub.publish(frame)
+        frame_rate.sleep()
+    
+    image_feed.release()
 
 
 if __name__ == "__main__":

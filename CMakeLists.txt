@@ -267,3 +267,13 @@ target_link_libraries(idLinController ${catkin_LIBRARIES})
 # pidLinController [x, m, kpd, kid, pdd] // linear
 add_executable(pidLinController src/control/PID/05pid.cpp)
 target_link_libraries(pidLinController ${catkin_LIBRARIES})
+
+
+# for nodes requiring opencv client library
+find_package(OpenCV)
+include_directories(${OpenCV_INCLUDE_DIRS})
+
+# vid_io
+add_executable(vid_io src/OpenCV/_01VideoIO.cpp)
+target_link_libraries(vid_io ${catkin_LIBRARIES})
+target_link_libraries(vid_io ${OpenCV_LIBRARIES})
