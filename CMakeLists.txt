@@ -12,6 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  cv_bridge
+  image_transport
 )
 
 ## System dependencies are found with CMake's conventions
@@ -277,3 +279,16 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 add_executable(vid_io src/OpenCV/_01VideoIO.cpp)
 target_link_libraries(vid_io ${catkin_LIBRARIES})
 target_link_libraries(vid_io ${OpenCV_LIBRARIES})
+
+# open_save
+add_executable(open_save src/OpenCV/_02Open_and_Save.cpp)
+target_link_libraries(open_save ${catkin_LIBRARIES})
+target_link_libraries(open_save ${OpenCV_LIBRARIES})
+
+
+
+# brdidging opencv and ROS
+add_executable(bridgingOpencvROS src/OpenCV/_03Bridging_OpenCV_ROS.cpp)
+target_link_libraries(bridgingOpencvROS ${catkin_LIBRARIES})
+target_link_libraries(bridgingOpencvROS ${OpenCV_LIBRARIES})
+
