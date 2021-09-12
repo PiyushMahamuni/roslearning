@@ -28,7 +28,7 @@ def main():
 
         try:
             # making sure if we have read frame successfully
-            if frame:
+            if frame.any():
                 frame = bridge.cv2_to_imgmsg(frame[:, -1::-1, :], encoding="bgr8")
             # mirroring the frame
         except CvBridgeError as e:

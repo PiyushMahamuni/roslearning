@@ -72,13 +72,18 @@ class ImageConverter{
 
         cv::Mat grayscale;
         cv::Mat thresh_image;
+        cv::Mat hsv_image;
         cv::cvtColor(cv_ptr->image, grayscale, cv::COLOR_BGR2GRAY);
+        cv::cvtColor(cv_ptr->image, hsv_image, cv::COLOR_BGR2HSV);
+
         cv::adaptiveThreshold(grayscale, thresh_image, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 7, 0);
 
         // Update GUI window
         cv::imshow(winname, cv_ptr->image);
         cv::imshow(winname+" in graysclae", grayscale);
         cv::imshow(winname+" thresholded", thresh_image);
+        cv::imshow(winname+" hsv", hsv_image);
+
         
         cv::waitKey(3);
         // output modified video stream
