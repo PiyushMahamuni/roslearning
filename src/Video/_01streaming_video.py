@@ -27,7 +27,9 @@ def main():
         ret, frame = image_feed.read()
 
         try:
-            frame = bridge.cv2_to_imgmsg(frame[:, -1::-1, :], encoding="bgr8")
+            # making sure if we have read frame successfully
+            if frame:
+                frame = bridge.cv2_to_imgmsg(frame[:, -1::-1, :], encoding="bgr8")
             # mirroring the frame
         except CvBridgeError as e:
             print(e)
