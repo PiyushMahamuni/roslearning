@@ -67,13 +67,20 @@ class ImageConverter{
         // Do some processing on image
         // Drawing a circle
         if(cv_ptr->image.rows > 60 && cv_ptr->image.cols > 60){
-            cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255, 0, 0));
+            cv::circle(cv_ptr->image, cv::Point(cv_ptr->image.cols/2, cv_ptr->image.rows/2), 10, CV_RGB(255, 0, 0), -1);
         }
+
+        cv::Mat grayscale;
+        cv::Mat thresh_image;
+        cv::cvtColor(cv_ptr->image, grayscale, cv::COLOR_BGR2GRAY);
+        cv::adaptiveThreshold(grayscale, thresh_image, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 7, 0);
 
         // Update GUI window
         cv::imshow(winname, cv_ptr->image);
+        cv::imshow(winname+" in graysclae", grayscale);
+        cv::imshow(winname+" thresholded", thresh_image);
+        
         cv::waitKey(3);
-
         // output modified video stream
 
         // CvImagePtr::toImageMsg converts opencv image to ROS image msg
