@@ -1,0 +1,4 @@
+<launch>
+    <node name="streaming_vid_py" pkg="roslearning" type="_01streaming_video.py"/>
+    <node name="BridgingOpencvROS" pkg="roslearning" type="bridgingOpencvROS"/>
+</launch>
