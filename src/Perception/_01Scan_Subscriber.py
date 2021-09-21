@@ -17,16 +17,21 @@ def scan_callback(msg):
 
     # discard all the nan values from the ranges.
     msg.ranges = [x for x in msg.ranges if not math.isnan(x)]
-    max = min = avg = 0
+    max = min = avg = count = 0
     for ind, val in enumerate(msg.ranges):
-        if val > max:
-            max = val
-            maxInd = ind
-        if val < min:
-            min = val
-            minInd = ind
-        avg += val
-    avg /= (ind + 1)
+        if not math.isnan(val):
+            count += 1
+            if val > max:
+                max = val
+                maxInd = ind
+            if val < min:
+                min = val
+                minInd = ind
+            avg += val
+    if count:
+        avg /= count
+    else:
+        avg = -1
     print(f"Maximum range: {max}, at ind: {maxInd}")
     print(f"Minimum range: {min}, at ind: {minInd}")
     print(f"Average of all ranges: {avg}")
