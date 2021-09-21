@@ -14,6 +14,9 @@ scan_sub = None
 def scan_callback(msg):
     # the msg object will carry a ranges attribute which is a list carrying all the
     # intensities from the range finder
+
+    # discard all the nan values from the ranges.
+    msg.ranges = [x for x in msg.ranges if not math.isnan(x)]
     max = min = avg = 0
     for ind, val in enumerate(msg.ranges):
         if val > max:
