@@ -52,7 +52,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 # add_message_files(
 #   FILES
-# )
+#)
 
 ## Generate services in the 'srv' folder
  add_service_files(
@@ -251,23 +251,23 @@ add_executable(goto src/Motion/Expert/03goto.cpp)
 target_link_libraries(goto ${catkin_LIBRARIES})
 
 # pLinController [x, m, kpd] // linear
-add_executable(pLinController src/control/PID/01proportional.cpp)
+add_executable(pLinController src/Control/PID/01proportional.cpp)
 target_link_libraries(pLinController ${catkin_LIBRARIES})
 
 # iLinController [x, m, kid] // linear
-add_executable(iLinController src/control/PID/02integral.cpp)
+add_executable(iLinController src/Control/PID/02integral.cpp)
 target_link_libraries(iLinController ${catkin_LIBRARIES})
 
 # pdLinController [x, m, kpd, kdd] // linear
-add_executable(pdLinController src/control/PID/03pd.cpp)
+add_executable(pdLinController src/Control/PID/03pd.cpp)
 target_link_libraries(pdLinController ${catkin_LIBRARIES})
 
 # idLinController [x, m, kpd, kid] // linear
-add_executable(idLinController src/control/PID/04id.cpp)
+add_executable(idLinController src/Control/PID/04id.cpp)
 target_link_libraries(idLinController ${catkin_LIBRARIES})
 
 # pidLinController [x, m, kpd, kid, pdd] // linear
-add_executable(pidLinController src/control/PID/05pid.cpp)
+add_executable(pidLinController src/Control/PID/05pid.cpp)
 target_link_libraries(pidLinController ${catkin_LIBRARIES})
 
 
