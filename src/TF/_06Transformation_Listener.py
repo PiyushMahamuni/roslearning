@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import rospy, tf, geometry_msgs.msg, turtlesim.srv
+import rospy, tf
 
 # CONSTANTS
 NODE_NAME = "frame_a_to_frame_b_listener"
