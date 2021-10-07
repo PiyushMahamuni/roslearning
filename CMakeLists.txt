@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   cv_bridge
   image_transport
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -292,3 +293,7 @@ add_executable(bridgingOpencvROS src/OpenCV/_03Bridging_OpenCV_ROS.cpp)
 target_link_libraries(bridgingOpencvROS ${catkin_LIBRARIES})
 target_link_libraries(bridgingOpencvROS ${OpenCV_LIBRARIES})
 
+
+# Transformation broadcaster
+add_executable(_05Transformation_Broadcaster src/TF/_05Transformation_Broadcaster.cpp)
+target_link_libraries(_05Transformation_Broadcaster ${catkin_LIBRARIES})
