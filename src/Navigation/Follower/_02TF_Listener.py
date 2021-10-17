@@ -26,12 +26,9 @@ def setup():
     global transform_listener
     transform_listener = tf.TransformListener()
 
-    # create a second turtle by calling the service
-    rospy.wait_for_service("spawn")
-    spawner = rospy.ServiceProxy("spawn", turtlesim.srv.Spawn)
     global turtle2
     turtle2 = rospy.get_param("~turtle2")
-    spawner(4, 2, 0, turtle2)
+
     # spawn the turtle with given name at 4, 2, 0
 
     # create a velocity publisher for this robot

@@ -2,7 +2,7 @@
 
 import rospy, tf
 from turtlesim.msg import Pose
-
+from turtlesim.srv import Spawn
 
 # CONSTANTS
 NODE_NAME = "turtle_tf_broadcaster"
@@ -40,6 +40,11 @@ def setup():
     # the nodes with following line.
     # see ./follower.launch file    
     turtlename = rospy.get_param('~turtle')
+
+    # spanw the turlte in turtlesim node
+    rospy.wait_for_service("spawn")
+    spawner = rospy.ServiceProxy("spawn", Spawn)
+    spawner(5, 5, 0, turtlename)
 
     # subscribe to the pose topic
     global pose_sub
