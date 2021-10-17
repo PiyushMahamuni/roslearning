@@ -1,0 +1,16 @@
+The follower application will make a simulated turtlebot robot follow another simulated turtlebot which is teleoperated via a keyboard or via the
+rosserial node that publishes velocity messages to cmd_vel for that robot.
+
+CODE STRUCTURE:
+
+STEP 1:
+	Create a TF Broadcaster to broadcast the frame of the robots.
+	
+STEP 2:
+	Assign a TF broadcaster to every robot.
+
+STEP 3:
+	Create a TF Listener
+		Get the transformation between two frames.
+		Extract the distance and orientation
+		Make the turtle2 move towards turtle1 using go to goal behaviour.
