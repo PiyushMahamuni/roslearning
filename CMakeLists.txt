@@ -209,10 +209,13 @@ include_directories(
 
 # add_two_ints_server
 add_executable(add_two_ints_server_cpp src/Services/add_two_ints_server.cpp)
+add_dependencies(add_two_ints_server_cpp roslearning_generate_messages_cpp)
 target_link_libraries(add_two_ints_server_cpp ${catkin_LIBRARIES})
+
 
 # add_two_ints_client
 add_executable(add_two_ints_client_cpp src/Services/add_two_ints_client.cpp)
+add_dependencies(add_two_ints_client_cpp roslearning_generate_messages_cpp)
 target_link_libraries(add_two_ints_client_cpp ${catkin_LIBRARIES})
 
 # talker
@@ -225,10 +228,12 @@ target_link_libraries(listener ${catkin_LIBRARIES})
 
 # rec_area_server
 add_executable(rec_area_server src/Services/rec_area_server.cpp)
+add_dependencies(rec_area_server roslearning_generate_messages_cpp)
 target_link_libraries(rec_area_server ${catkin_LIBRARIES})
 
 # rec _area_client
 add_executable(rec_area_client src/Services/rec_area_client.cpp)
+add_dependencies(rec_area_client roslearning_generate_messages_cpp)
 target_link_libraries(rec_area_client ${catkin_LIBRARIES})
 
 # move [dist] [speed]
