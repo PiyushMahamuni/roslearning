@@ -1,0 +1,12 @@
+<!-- Exploring proportional controller -->
+<launch>
+    <arg name="x0" default="7.0"/>
+    <arg name="m" default="1.0"/>
+    <arg name="kpd" default="4"/>
+    <node name="turtlesim_node" pkg="turtlesim" type="turtlesim_node"/>
+    <node name="p_controller" pkg="roslearning" type="pLinController" output="screen">
+        <param name="x0" value="$(arg x0)" type="double"/>
+        <param name="m" value="$(arg m)" type="double"/>
+        <param name="kpd" value="$(arg kpd)" type="double"/>
+    </node>
+</launch>
