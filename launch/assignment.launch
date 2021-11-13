@@ -1,0 +1,6 @@
+<!-- One node publishes image from a media file of a tennis ball, the other node performs the object detection-->
+
+<launch>
+    <node name="img_publisher" pkg="roslearning" type="_02Publishing_Image.py"/>
+    <node name="img_subscriber" pkg="roslearning" type="_03Subscriber.py"/>
+</launch>
