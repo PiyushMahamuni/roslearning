@@ -12,7 +12,8 @@ NODE_NAME = "tennis_ball_detector"
 
 # GLOBALS
 bridge = CvBridge()
-image_sub = None
+image_sub: rospy.Subscriber = None
+
 
 def filter_color(rgb_image, lower_bound_color, upper_bound_color):
     #convert the image into the HSV color space
@@ -24,6 +25,7 @@ def filter_color(rgb_image, lower_bound_color, upper_bound_color):
 
     return mask
 
+
 def getContours(binary_image):      
     contours, hierarchy = cv2.findContours(binary_image.copy(), 
                                             cv2.RETR_EXTERNAL,
@@ -33,30 +35,31 @@ def getContours(binary_image):
 
 def draw_ball_contour(binary_image, rgb_image, contours):
     black_image = np.zeros([binary_image.shape[0], binary_image.shape[1],3],'uint8')
-    
+    # using 3 channel rgb image to be able to draw colored circles and contours
+
     for c in contours:
         area = cv2.contourArea(c)
         perimeter= cv2.arcLength(c, True)
         ((x, y), radius) = cv2.minEnclosingCircle(c)
         x = int(x)
         y = int(y)
-        if (area>100):
+        if area > 100:
             cv2.drawContours(rgb_image, [c], -1, (150,250,150), 1)
             cv2.drawContours(black_image, [c], -1, (150,250,150), 1)
-            cv2.circle(rgb_image, (x,y),(int)(radius),(0,0,255),1)
-            cv2.circle(black_image, (x,y),(int)(radius),(0,0,255),1)
-            cv2.circle(black_image, (x,y),5,(150,150,255),-1)
-            print ("Area: {}, Perimeter: {}".format(area, perimeter))
-    print ("number of contours: {}".format(len(contours)))
-    cv2.imshow("RGB Image Contours",rgb_image)
-    cv2.imshow("Black Image Contours",black_image)
+            cv2.circle(rgb_image, (x,y), int(radius), (0,0,255), 1)
+            cv2.circle(black_image, (x,y), int(radius), (0,0,255), 1)
+            cv2.circle(black_image, (x,y), 5, (150,150,255), -1)
+            print (f"Area: {area}, Perimeter: {perimeter}")
+    print (f"number of contours: {len(contours)}")
+    cv2.imshow("RGB Image Contours", rgb_image)
+    cv2.imshow("Black Image Contours", black_image)
 
 
 def image_callback(ros_image):
 
     # if you look at the documentation of sensor_msgs.msg.Image message, you'll find that all the data of the image
     # is carried as a single dimensional array of unsigned integers, while other fields of the image
-    # carry critical enfomation to decode that single dimensional array into appropriate format which are height, width of image
+    # carry critical infomation on how to decode that single dimensional array into appropriate format which are height, width of image
     # and encoding of the image. There are also headers which hold the timestamps and other bits of information.
 
     print("Recieved an Image")
@@ -68,7 +71,7 @@ def image_callback(ros_image):
         print(e)
     # from this point onwards, you can work on image object with cv2 library as usual
 
-    yellowLower =(30, 125, 80)
+    yellowLower = (30, 125, 80)
     yellowUpper = (55, 255, 255)
 
     binary_image_mask = filter_color(image, yellowLower, yellowUpper)

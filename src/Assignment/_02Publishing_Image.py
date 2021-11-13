@@ -9,7 +9,7 @@ NODE_NAME = "tennis_ball_publisher"
 IMAGE_TOPIC = "tennis_ball_image"
 
 # GLOBALS
-image_pub = None
+image_pub: rospy.Publisher = None
 bridge = CvBridge()
 
 def main():
@@ -18,7 +18,7 @@ def main():
     image_pub = rospy.Publisher(IMAGE_TOPIC, Image, queue_size=1)
 
     # attach video file
-    image_feed = cv2.VideoCapture("/home/phineas/Video/tennis-ball-video.mp4")
+    image_feed = cv2.VideoCapture("/home/phineas/Videos/tennis-ball-video.mp4")
 
     frame_rate = rospy.Rate(30)
     while not rospy.is_shutdown():
