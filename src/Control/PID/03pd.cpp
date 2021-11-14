@@ -4,9 +4,9 @@
 #include <math.h>
 
 // CONSTANTS
-const char* NODE_NAME{"pLinController"};
-const char* VEL_TOPIC{"turtle1/cmd_vel"};
-const char* POSE_TOPIC{"turtle1/pose"};
+const char* NODE_NAME{"pdLinController"};
+const char* VEL_TOPIC{"/turtle1/cmd_vel"};
+const char* POSE_TOPIC{"/turtle1/pose"};
 const _Float32 LT {0.01}; // linar tolerance
 const float blinkFreq {100.0};
 const float controllerFreq{100.0};
@@ -21,9 +21,12 @@ geometry_msgs::Twist stop_msg;  // velocity message having all fields set to zer
 bool poseUpdated {false};   // tells whether position is updated since the last time this variable
 // was set to false
 ros::Rate* blink{nullptr};   // blinking (short idle) duration
+ros::NodeHandle* node{nullptr};
 
 // setup this node
 inline void setup(int argc, char** argv);
+// wrapup this node
+inline void wrapup();
 // callback function for pose_sub
 void pose_callback(const turtlesim::Pose::ConstPtr& msg);
 // function implementing proportional-derivative linear controller
@@ -34,19 +37,27 @@ void stop_robot();
 void waitPoseUpdate();
 
 int main(int argc, char** argv){
-    if(argc != 5){
-        std::cerr << "Usage: " << argv[0] << " [x, m, kpd, kdd]\n";
-        std::cout << "Info -------------------------" << std::endl
-        << "This program works along with turtlesim_node, emulating that robot has\n"
-        << "Given mass `m` it implements a proportional-derrivative cotroller whose output is a `force`\n"
-        << "Which is imparted on body of robot to make it move\n"
-        << "Note, this program doesn't take in account the angle of robot and assumes it is at 0 rad\n";
-        
+    setup(argc, argv);
+    std::cout << "Info -------------------------" << std::endl
+    << "This program works along with turtlesim_node, emulating that robot has\n"
+    << "Given mass `m` it implements a proportional-derrivative cotroller whose output is a `force`\n"
+    << "Which is imparted on body of robot to make it move\n"
+    << "Note, this program doesn't take in account the angle of robot and assumes it is at 0 rad\n";
+    float x0, m, kpd, kdd;
+    bool success{true};
+    success = success && node->getParam("x0", x0);
+    if(success)
+        success = success && node->getParam("m", m);
+    if(success)
+        success = success && node->getParam("kpd", kpd);
+    if(success)
+        success = success && node->getParam("kdd", kdd);
+    if(!success){
+        ROS_INFO("[%s] Couldn't Retrieve the parameters!", NODE_NAME);
+        ros::shutdown();
         return 1;
     }
-    setup(argc, argv);
-    pdLineController((_Float32)atof(argv[1]), (_Float32)atof(argv[3]), 
-                     (_Float32)atof(argv[4]), (_Float32)atof(argv[2]), true);
+    pdLineController(x0, kpd, kdd, m, true);
     return 0;
 }
 
@@ -57,13 +68,20 @@ inline void setup(int argc, char** argv){
     vel_msg.angular.x = vel_msg.angular.y = vel_msg.angular.z = 0;
     stop_msg = vel_msg;
     ros::init(argc, argv, NODE_NAME);
-    ros::NodeHandle node;
+    node = new ros::NodeHandle("~");
     // initialize POSE_TOPIC subscriber
-    pose_sub = node.subscribe(POSE_TOPIC, 1, pose_callback);
+    pose_sub = node->subscribe(POSE_TOPIC, 1, pose_callback);
     // initialize VEL_TOPIC publisher
-    vel_pub = node.advertise<geometry_msgs::Twist>(VEL_TOPIC, 1);
+    vel_pub = node->advertise<geometry_msgs::Twist>(VEL_TOPIC, 1);
     // initialize blink
     blink = new ros::Rate(blinkFreq);
+    return;
+}
+
+// wrapup this node
+inline void wrapup(){
+    delete blink;
+    delete node;
     return;
 }
 
@@ -98,7 +116,7 @@ void pdLineController(_Float32 x0, _Float32 kpd, _Float32 kdd, _Float32 m, bool 
     _Float32 loop_dur {(_Float32)ControllerRate.expectedCycleTime().toSec()};
     x0 = abs(x0); // there aren't any -ve x values on screen of turtlesim simulator
     kdd /= loop_dur;
-    _Float32 _s2 {x0 - cpos.x}, _s1 {_s2}, pv{0}, cv{}, K{loop_dur/(2*m)},
+    _Float32 dx{x0 - cpos.x}, pv{0}, cv{}, K{loop_dur/(2*m)},
     force{}; // prev velocity, current velocity
 
     // playground
@@ -115,27 +133,22 @@ void pdLineController(_Float32 x0, _Float32 kpd, _Float32 kdd, _Float32 m, bool 
         avg velocity v = ds/dt = rate of change of error
         Derrivative controller acts like dampner, opposing velocity
         fd = -Kd * v;
-        fd = Kd (s1 - s2)/ dt;
-        if dt is const, Kd = Kd2
-        fd = Kd2 (s1 - s2);
+        fd = -Kd * vel_cmd.linear.x;
         Use suffix 2 for all current values, suffix 1 for all previous values
         let -s be _s = x0 - x
         f = fp + fd
-          = -Kp * s2 + (-Kd v2)
-          = Kp * (_s2) + Kd2 (s1 - s2)
-          = Kp * (_s2) + kd2 (_s2 - _s1)
+          = -Kp * s2 - Kd v1
     */
     // ~playground
     do{
-        force = kpd * _s2 + kdd * (_s2 - _s1);
+        force = kpd * dx - kdd * vel_msg.linear.x;
         cv = force * K;
         vel_msg.linear.x += (pv + cv);
         pv = cv;
-        _s1 = _s2;
         vel_pub.publish(vel_msg);
         blink->sleep();
         ros::spinOnce();
-        _s2 = x0 - cpos.x;
+        dx = x0 - cpos.x;
     }while(ros::ok());
     if(log) ROS_INFO("[%s] PD Linear Controller stopped!", NODE_NAME);
     return;
@@ -153,6 +166,11 @@ void waitPoseUpdate(){
     poseUpdated = false;
     while(!poseUpdated){
         blink->sleep();
-        ros::spinOnce();
+        try{
+            ros::spinOnce();
+        }
+        catch(ros::Exception& e){
+            ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+        }
     }
 }

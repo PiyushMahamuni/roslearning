@@ -1,0 +1,17 @@
+<!-- Demonstrating Proportioal-Derivative control with the help of turtlesim-->
+
+<launch>
+    <!-- arguments -->
+    <arg name="x0"  default="6.7"/>
+    <arg name="m"   default="1.0"/>
+    <arg name="kpd" default= "4"/>
+    <arg name="kdd" default="0.005"/>
+
+    <node name="turtlesim_node"   type="turtlesim_node"   pkg="turtlesim"/>
+    <node name="pdLinController" type="pdLinController" pkg="roslearning" output="screen">
+        <param name="x0"  value="$(arg x0)"  type="double"/>
+        <param name="m"   value="$(arg m)"   type="double"/>
+        <param name="kpd" value="$(arg kpd)" type="double"/>
+        <param name="kdd" value="$(arg kdd)" type="double"/>
+    </node>
+</launch>
