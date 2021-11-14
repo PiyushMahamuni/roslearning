@@ -90,6 +90,7 @@ inline void setup(int argc, char** argv){
 inline void wrapup(){
     delete blink;
     delete node;
+    return;
 }
 
 
@@ -157,6 +158,7 @@ void waitPoseUpdate(){
         }
         catch(ros::Exception& e){
             ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+            ros::shutdown();
         }
     }
 }

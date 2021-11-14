@@ -172,6 +172,7 @@ void waitPoseUpdate(){
         }
         catch(ros::Exception& e){
             ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+            ros::shutdown();
         }
     }
 }

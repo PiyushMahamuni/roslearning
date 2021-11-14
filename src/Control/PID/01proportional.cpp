@@ -78,6 +78,7 @@ inline void setup(int argc, char** argv){
 inline void wrapup(){
     delete blink;
     delete node;
+    return;
 }
 // callback function for pose_sub
 void pose_callback(const turtlesim::Pose::ConstPtr& msg){
@@ -130,7 +131,13 @@ void stop_robot(){
 void waitPoseUpdate(){
     poseUpdated = false;
     while(!poseUpdated){
-        blink->sleep();
-        ros::spinOnce();
+        try{
+            blink->sleep();
+            ros::spinOnce();
+        }
+        catch(ros::Exception& e){
+            ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+            ros::shutdown();
+        }
     }
 }
