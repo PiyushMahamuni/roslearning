@@ -1,0 +1,13 @@
+<!-- Demonstrating Integral Control with the help of turtlesim -->
+<launch>
+    <arg name="x0" default="6"/>
+    <arg name="m" default="1.0"/>
+    <arg name="kid" default="0.00000001"/>
+    
+    <node name="turtlesim_node" pkg="turtlesim" type="turtlesim_node"/>
+    <node name="iLinController" pkg="roslearning" type="iLinController" output="screen">
+        <param name="x0" value="$(arg x0)" type="double"/>
+        <param name="m" value="$(arg m)" type="double"/>
+        <param name="kid" value="$(arg kid)" type="double"/>
+    </node>
+</launch>
