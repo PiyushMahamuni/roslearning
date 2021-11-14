@@ -73,13 +73,20 @@ inline void setup(int argc, char** argv){
     vel_msg.angular.x = vel_msg.angular.y = vel_msg.angular.z = 0;
     stop_msg = vel_msg;
     ros::init(argc, argv, NODE_NAME);
-    ros::NodeHandle node;
+    node = new ros::NodeHandle("~");
     // initialize POSE_TOPIC subscriber
-    pose_sub = node.subscribe(POSE_TOPIC, 1, pose_callback);
+    pose_sub = node->subscribe(POSE_TOPIC, 1, pose_callback);
     // initialize VEL_TOPIC publisher
-    vel_pub = node.advertise<geometry_msgs::Twist>(VEL_TOPIC, 1);
+    vel_pub = node->advertise<geometry_msgs::Twist>(VEL_TOPIC, 1);
     // initialize blink
     blink = new ros::Rate(blinkFreq);
+    return;
+}
+
+// wrapup this node
+inline void wrapup(){
+    delete blink;
+    delete node;
     return;
 }
 
@@ -115,7 +122,7 @@ void pidLineController(_Float32 x0, _Float32 kpd, _Float32 kid, _Float32 kdd, _F
     _Float32 loop_dur {(_Float32)ControllerRate.expectedCycleTime().toSec()};
     x0 = abs(x0); // there aren't any -ve x values on screen of turtlesim simulator
     kdd /= loop_dur;
-    _Float32 _s2 {x0 - cpos.x}, _s1 {_s2}, pv{0}, cv{}, fi{}, K{loop_dur/(2*m)},
+    _Float32 dx{x0 - cpos.x}, pv{0}, cv{}, fi{}, K{loop_dur/(2*m)},
     force{}; // prev velocity, current velocity
 
     // playground
@@ -146,16 +153,15 @@ void pidLineController(_Float32 x0, _Float32 kpd, _Float32 kid, _Float32 kdd, _F
     */
     // ~playground
     do{
-        fi += kid * _s2;
-        force = kpd * _s2 + kdd * (_s2 - _s1) + fi;
+        fi += kid * dx;
+        force = kpd * dx - kdd * vel_msg.linear.x + fi;
         cv = force * K;
         vel_msg.linear.x += (pv + cv);
         pv = cv;
-        _s1 = _s2;
         vel_pub.publish(vel_msg);
         blink->sleep();
         ros::spinOnce();
-        _s2 = x0 - cpos.x;
+        dx = x0 - cpos.x;
     }while(ros::ok());
     if(log) ROS_INFO("[%s] PID Linear Controller stopped!", NODE_NAME);
     return;
@@ -172,7 +178,13 @@ void stop_robot(){
 void waitPoseUpdate(){
     poseUpdated = false;
     while(!poseUpdated){
-        blink->sleep();
-        ros::spinOnce();
+        try{    
+            blink->sleep();
+            ros::spinOnce();
+        }
+        catch(ros::Exception& e){
+            ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+            ros::shutdown();
+        }
     }
 }
