@@ -37,7 +37,6 @@ void waitPoseUpdate();
 
 int main(int argc, char** argv){
     setup(argc, argv);
-    std::cerr << "Usage: " << argv[0] << " [x, m, kpd, kid, kdd]\n";
     std::cout << "Info -------------------------" << std::endl
     << "This program works along with turtlesim_node, emulating that robot has\n"
     << "Given mass `m` it implements a porportional-integral-derrivative cotroller\n"
@@ -57,7 +56,7 @@ int main(int argc, char** argv){
     if(success)
         success = success && node->getParam("kdd", kdd);
     if(!success){
-        ROS_INFO("[%s] Couldn't Retrieve all parameters!");
+        ROS_INFO("[%s] Couldn't Retrieve all parameters!", NODE_NAME);
         ros::shutdown();
         return 1;
     }
