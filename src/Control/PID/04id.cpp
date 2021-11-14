@@ -115,47 +115,18 @@ void idLineController(_Float32 x0, _Float32 kid, _Float32 kdd, _Float32 m, bool 
     _Float32 loop_dur {(_Float32)ControllerRate.expectedCycleTime().toSec()};
     x0 = abs(x0); // there aren't any -ve x values on screen of turtlesim simulator
     kdd /= loop_dur;
-    _Float32 _s2 {x0 - cpos.x}, _s1 {_s2}, pv{0}, cv{}, fi{}, K{loop_dur/(2*m)},
+    _Float32 dx {x0 - cpos.x}, pv{0}, cv{}, fi{}, K{loop_dur/(2*m)},
     force{}; // prev velocity, current velocity
-
-    // playground
-    /*
-        Let s be the relative displacement of robot w.r.t. target/desired location/point
-        let x0 be the desired value, x be the current position
-        relative displacement s = x - x0 = error
-        Integral controller -
-        dfi = -kid * s;
-        fi += dfi;
-        ---------> fi += kid * _s, in loop we use _s2 for current displacement value(negated)
-        ---------> fi += kid * _s2;
-        // restoring force acts in opposite direction to that of displacement
-        let s1 be a displacement at time t1, s2 at time t2=t1+dt
-        ds = s2 - s1
-        avg velocity v = ds/dt = rate of change of error
-        Derrivative controller acts like dampner, opposing velocity
-        fd = -Kd * v;
-        fd = Kd (s1 - s2)/ dt;
-        if dt is const, Kd = Kd2
-        fd = Kd2 (s1 - s2);
-        Use suffix 2 for all current values, suffix 1 for all previous values
-        let -s be _s = x0 - x
-        f = fp + fd
-          = -Kp * s2 + (-Kd v2)
-          = Kp * (_s2) + Kd2 (s1 - s2)
-          = Kp * (_s2) + kd2 (_s2 - _s1)
-    */
-    // ~playground
     do{
-        fi += kid * _s2;
-        force = kdd * (_s2 - _s1) + fi;
+        fi += kid * dx;
+        force = -kdd * vel_msg.linear.x + fi;
         cv = force * K;
         vel_msg.linear.x += (pv + cv);
         pv = cv;
-        _s1 = _s2;
         vel_pub.publish(vel_msg);
         blink->sleep();
         ros::spinOnce();
-        _s2 = x0 - cpos.x;
+        dx = x0 - cpos.x;
     }while(ros::ok());
     if(log) ROS_INFO("[%s] ID Linear Controller stopped!", NODE_NAME);
     return;
@@ -172,7 +143,12 @@ void stop_robot(){
 void waitPoseUpdate(){
     poseUpdated = false;
     while(!poseUpdated){
-        blink->sleep();
-        ros::spinOnce();
+        try{
+            blink->sleep();
+            ros::spinOnce();
+        }
+        catch(ros::Exception& e){
+            ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+        }
     }
 }
