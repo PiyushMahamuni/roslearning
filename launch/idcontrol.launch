@@ -1,0 +1,18 @@
+<!-- Demonstrating Integral-Derivative Controller with the help of turtlesim -->
+<!-- The motion is damped but still the robot keeps oscillating with increasing amplitude -->
+
+<launch>
+    <!-- Arguments -->
+    <arg name="x0"  default="7"/>
+    <arg name="m"   default="1.0"/>
+    <arg name="kdd" default="0.008"/>
+    <arg name="kid" default="0.000001"/>
+
+    <node name="turtlesim_node"  type="turtlesim_node"  pkg="turtlesim"/>
+    <node name="idLinController" type="idLinController" pkg="roslearning" output="screen">
+        <param name="x0"  value="$(arg x0)"  type="double"/>
+        <param name="m"   value="$(arg m)"   type="double"/>
+        <param name="kdd" value="$(arg kdd)" type="double"/>
+        <param name="kid" value="$(arg kid)" type="double"/>
+    </node>
+</launch>
