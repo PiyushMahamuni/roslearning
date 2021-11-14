@@ -57,6 +57,7 @@ int main(int argc, char** argv){
         return 1;
     }
     idLineController(x0, kid, kdd, m, true);
+    wrapup();
     return 0;
 }
 

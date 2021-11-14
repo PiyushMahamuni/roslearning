@@ -3,10 +3,10 @@
 #include "geometry_msgs/Twist.h"
 
 // CONSTANTS
-const char* NODE_NAME{"pidLinController"};
-const char* VEL_TOPIC{"turtle1/cmd_vel"};
-const char* POSE_TOPIC{"turtle1/pose"};
-const _Float32 LT {0.01}; // linar tolerance
+const char* NODE_NAME{"/pidLinController"};
+const char* VEL_TOPIC{"/turtle1/cmd_vel"};
+const char* POSE_TOPIC{"/turtle1/pose"};
+const _Float32 LT {0.01}; // linear threshold
 const float blinkFreq {100.0};
 const float controllerFreq{100.0};
 
@@ -20,9 +20,12 @@ geometry_msgs::Twist stop_msg;  // velocity message having all fields set to zer
 bool poseUpdated {false};   // tells whether position is updated since the last time this variable
 // was set to false
 ros::Rate* blink{nullptr};   // blinking (short idle) duration
+ros::NodeHandle* node{nullptr};
 
 // setup this node
 inline void setup(int argc, char** argv);
+// wrapup this node
+inline void wrapup();
 // callback function for pose_sub
 void pose_callback(const turtlesim::Pose::ConstPtr& msg);
 // function implementing proportional-integral-derivative linear controller
@@ -33,20 +36,33 @@ void stop_robot();
 void waitPoseUpdate();
 
 int main(int argc, char** argv){
-    if(argc != 6){
-        std::cerr << "Usage: " << argv[0] << " [x, m, kpd, kid, kdd]\n";
-        std::cout << "Info -------------------------" << std::endl
-        << "This program works along with turtlesim_node, emulating that robot has\n"
-        << "Given mass `m` it implements a porportional-integral-derrivative cotroller\n"
-        << "whose output is a `force` Which is imparted on body of robot to make it move\n"
-        << "Note, this program doesn't take in account the angle of robot and assumes it is at 0 rad\n";
-        
+    setup(argc, argv);
+    std::cerr << "Usage: " << argv[0] << " [x, m, kpd, kid, kdd]\n";
+    std::cout << "Info -------------------------" << std::endl
+    << "This program works along with turtlesim_node, emulating that robot has\n"
+    << "Given mass `m` it implements a porportional-integral-derrivative cotroller\n"
+    << "whose output is a `force` Which is imparted on body of robot to make it move\n"
+    << "Note, this program doesn't take in account the angle of robot and assumes it is at 0 rad\n";
+    
+    float x0, m, kpd, kid, kdd;
+    bool success{true};
+
+    success = success && node->getParam("x0", x0);
+    if(success)
+        success = success && node->getParam("m", m);
+    if(success)
+        success = success && node->getParam("kpd", kpd);
+    if(success)
+        success = success && node->getParam("kid", kid);
+    if(success)
+        success = success && node->getParam("kdd", kdd);
+    if(!success){
+        ROS_INFO("[%s] Couldn't Retrieve all parameters!");
+        ros::shutdown();
         return 1;
     }
-    setup(argc, argv);
-    pidLineController((_Float32)atof(argv[1]), (_Float32)atof(argv[3]), 
-                     (_Float32)atof(argv[4]), (_Float32)atof(argv[5]),
-                     (_Float32)atof(argv[2]), true);
+    pidLineController(x0, kpd, kid, kdd, m, true);
+    wrapup();
     return 0;
 }
 

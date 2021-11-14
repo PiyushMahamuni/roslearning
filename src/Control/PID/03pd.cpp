@@ -58,6 +58,7 @@ int main(int argc, char** argv){
         return 1;
     }
     pdLineController(x0, kpd, kdd, m, true);
+    wrapup();
     return 0;
 }
 
