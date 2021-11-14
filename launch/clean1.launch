@@ -1,3 +1,4 @@
+<!-- The cleaning node is implemented in python, naive version -->
 <launch>
 	<node name = "turtlesim_node" pkg = "turtlesim" type = "turtlesim_node" />
 	<node name = "clean_node" pkg = "roslearning" type = "clean.py" output = "screen" />
