@@ -1,4 +1,6 @@
-<!-- Demonstrating Proportioal-Derivative control with the help of turtlesim-->
+<!-- Demonstrating Proportioal-Derivative control with the help of turtlesim -->
+<!-- In contrast to only proportional control, the extra damping means robot eventually settels on the
+mean position (arg x0) with each successive amplitude being smaller than the last -->
 
 <launch>
     <!-- arguments -->

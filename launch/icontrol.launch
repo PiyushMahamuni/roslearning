@@ -1,4 +1,8 @@
 <!-- Demonstrating Integral Control with the help of turtlesim -->
+<!-- The robot never settels on (arg x0) and keeps oscillating with increasing amplitudes 
+though it's motion starts off very slowly. It takes more time for I-controller to change the velocity of
+the robot but it also imparts very high velocities on the robot on its own. -->
+
 <launch>
     <arg name="x0" default="6"/>
     <arg name="m" default="1.0"/>

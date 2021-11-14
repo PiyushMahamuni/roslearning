@@ -1,4 +1,6 @@
 <!-- Exploring proportional controller -->
+<!-- The robot demonstrates a spring mass system. The spring in a spring-mass system acts as a proportional
+controller, applying force proportional to -1*displacement of mass -->
 <launch>
     <arg name="x0" default="7.0"/>
     <arg name="m" default="1.0"/>
