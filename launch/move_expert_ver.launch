@@ -1,0 +1,6 @@
+<!-- Makes the robot move through a certian distance and with a certain speed -->
+
+<launch>
+    <node name="turtlesim_node" type="turtlesim_node" pkg="turtlesim"/>
+    <node name="move" type="move" pkg="roslearning" output="screen"/>
+</launch>
