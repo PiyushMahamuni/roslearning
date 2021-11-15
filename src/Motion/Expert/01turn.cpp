@@ -265,7 +265,7 @@ void turn(_Float32 radians, _Float32 speed, bool log){
 int main(int argc, char **argv)
 {
     setup(argc, argv);
-    ROS_INFO("[%s] USE `rosservice call /turn \"radians: <float>\\nspeed: <float>\"` to make the robot turn", NODE_NAME);
+    ROS_INFO("[%s] USE `rosservice call /turn \"radians: <float>\nspeed: <float>\"` to make the robot turn", NODE_NAME);
     ros::spin();
     wrapup();
     return 0;
