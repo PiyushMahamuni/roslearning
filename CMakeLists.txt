@@ -60,6 +60,7 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    AddTwoInts.srv
    rec_area.srv
+   Move.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -238,6 +239,7 @@ target_link_libraries(rec_area_client ${catkin_LIBRARIES})
 
 # move [dist] [speed]
 add_executable(move src/Motion/Expert/00move.cpp)
+add_dependencies(move roslearning_generate_messages_cpp)
 target_link_libraries(move ${catkin_LIBRARIES})
 
 # turn [degrees]
