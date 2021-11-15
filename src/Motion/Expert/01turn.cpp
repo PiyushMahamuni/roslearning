@@ -101,9 +101,15 @@ void pose_sub_callback(const turtlesim::Pose::ConstPtr &msg)
 // wait for update on pose topic
 inline void wait_for_update(){
     updated_pose = false;
-    while(!updated_pose){
-        blink->sleep();
-        ros::spinOnce();
+    try{
+        while(!updated_pose){
+            blink->sleep();
+            ros::spinOnce();
+        }
+    }
+    catch(ros::Exception& e){
+        ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+        ros::shutdown();
     }
     return;
 }
