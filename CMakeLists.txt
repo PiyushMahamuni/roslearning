@@ -61,6 +61,8 @@ find_package(catkin REQUIRED COMPONENTS
    AddTwoInts.srv
    rec_area.srv
    Move.srv
+   Turn.srv
+   TurnTo.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -244,6 +246,7 @@ target_link_libraries(move ${catkin_LIBRARIES})
 
 # turn [degrees]
 add_executable(turn src/Motion/Expert/01turn.cpp)
+add_dependencies(turn roslearning_generate_messages_cpp)
 target_link_libraries(turn ${catkin_LIBRARIES})
 
 # turnto [degrees]
