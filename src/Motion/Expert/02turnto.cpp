@@ -10,7 +10,7 @@
 
 
 // CONSTANTS
-const char *NODE_NAME{"turtle_control"};
+const char *NODE_NAME{"turnto_node"};
 const char *VEL_TOPIC{"/turtle1/cmd_vel"};
 const char *POSE_TOPIC{"/turtle1/pose"};
 const char *TURNTO_SERVICE{"/turnto"};
