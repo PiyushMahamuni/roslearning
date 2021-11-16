@@ -9,7 +9,7 @@
 #include "roslearning/Turn.h"
 
 // CONSTANTS
-const char *NODE_NAME{"turtle_control"};
+const char *NODE_NAME{"turn_node"};
 const char *VEL_TOPIC{"/turtle1/cmd_vel"};
 const char *POSE_TOPIC{"/turtle1/pose"};
 const char *TURN_SERVICE{"turn"};
@@ -19,11 +19,8 @@ const _Float32 pi_by_4{0.785398163};
 const _Float32 pi_by_2{pi_by_4 * 2};
 const _Float32 pi{pi_by_2 * 2};
 const _Float32 pi_2{pi * 2};
-const _Float32 LT{0.4};         // Linear threshold
 const _Float32 AT{5 * static_cast<_Float32>(pi_by_4/45.0)}; // 5 degrees in radians
-const _Float32 LLS {1.7};       // limiting linear speed (m/s)
 const _Float32 LAS {pi};      // limiting angular speed (rad/s)
-const _Float32 ALS{0.3}; // Treat as const, don't change value on your own
 const _Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
 const _Float32 blink_dur{1.0 / 200};
 const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
@@ -43,8 +40,6 @@ bool to_pub_vel{false};
 
 
 // PROTOTYPES
-// tells whether the given target is out of bounds or not
-bool is_crashing();
 // publishes vel_cmd periodically, is meant to run on a seperate thread from main one
 void pub_vel_periodic();
 // callback function for pose_sub
@@ -61,13 +56,6 @@ inline void wrapup();
 void turn(_Float32 radians, _Float32 speed, bool log = false);
 // turn_srvr handler
 bool turn_handler(roslearning::Turn::Request& req, roslearning::Turn::Response& res);
-
-
-// returns true if tpos.theta is out of limits
-bool is_crashing()
-{
-    return tpos.x > xylim2 || tpos.x < xylim1 || tpos.y > xylim2 || tpos.y < xylim1;
-}
 
 // function to call periodically to publish vel_cmd on vel_topic
 void pub_vel_periodic()
