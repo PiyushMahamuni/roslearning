@@ -73,8 +73,8 @@ bool is_crashing()
 void pub_vel_periodic()
 {
     auto loop_idle_time = std::chrono::microseconds(static_cast<long long int>(1000000 * 1.0 / VEL_PUB_FREQ));
-    auto start = std::chrono::high_resolution_clock::now();
     u_int32_t count{0};
+    auto start = std::chrono::high_resolution_clock::now();
     while (to_pub_vel)
     {
         vel_pub.publish(vel_cmd);
@@ -90,10 +90,7 @@ void pose_sub_callback(const turtlesim::Pose::ConstPtr &msg)
 {
     cpos.x = msg->x;
     cpos.y = msg->y;
-    if(range_select == PITOPI)
-        cpos.theta = msg->theta;
-    else
-        cpos.theta = (msg->theta < 0) ? (pi_2 + msg->theta) : msg->theta;
+    cpos.theta = (range_select == PITOPI)? msg->theta : ((msg->theta < 0) ? (pi_2 + msg->theta) : msg->theta);
     updated_pose = true;
     return;
 }
@@ -219,8 +216,8 @@ void turn(_Float32 radians, _Float32 speed, bool log){
     }
 
     // start the thread to periodically publish vel_cmd
-    std::thread th1{pub_vel_periodic};
     to_pub_vel = true;
+    std::thread th1{pub_vel_periodic};
     if(abs(radians) > AT){
         float sleep_time {(abs(radians) - AT)/abs(speed)};
         ros::Duration sleep{sleep_time};
@@ -232,15 +229,7 @@ void turn(_Float32 radians, _Float32 speed, bool log){
     }
     // Final Moments
     // slow down for precision
-    if(speed > AAS){
-        vel_cmd.angular.z = AAS;
-    }
-    else if(speed < -AAS){
-        vel_cmd.angular.z = -AAS;
-    }
-    else{
-        vel_cmd.angular.z = speed;
-    }
+    vel_cmd.angular.z = (speed > AAS) ? AAS : ((speed < -AAS) ? -AAS : speed);
     vel_pub.publish(vel_cmd);
     ros::spinOnce();
     if(radians > 0){ // Turn counter clockwise
