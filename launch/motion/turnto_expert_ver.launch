@@ -1,0 +1,7 @@
+<!-- Demonstrates turnto node from this package which turns the robot towards a specific radian angle
+with given angular speed (rad/s) -->
+
+<launch>
+    <node name="turtlesim_node" type="turtlesim_node" pkg="turtlesim"/>
+    <node name="turnto_node"    type="turnto"         pkg="roslearning" output="screen"/>
+</launch>

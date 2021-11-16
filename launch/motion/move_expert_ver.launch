@@ -2,5 +2,5 @@
 
 <launch>
     <node name="turtlesim_node" type="turtlesim_node" pkg="turtlesim"/>
-    <node name="move" type="move" pkg="roslearning" output="screen"/>
+    <node name="move_node"      type="move"           pkg="roslearning" output="screen"/>
 </launch>

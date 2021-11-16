@@ -3,5 +3,5 @@ given angular speed (rad/s) -->
 
 <launch>
     <node name="turtlesim_node" type="turtlesim_node" pkg="turtlesim"/>
-    <node name="turn"           type="turn"           pkg="roslearning" output="screen"/>
+    <node name="turn_node"      type="turn"           pkg="roslearning" output="screen"/>
 </launch>
