@@ -2,18 +2,22 @@
 #include "ros/ros.h"
 #include "turtlesim/Pose.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Point32.h"
 #include <math.h>
+#include "roslearning/Goto.h"
 
 // Constants
-const char* NODE_NAME {"goto"};
-const char* VEL_TOPIC {"turtle1/cmd_vel"};
-const char* POSE_TOPIC {"turtle1/pose"};
+const char* NODE_NAME {"goto_node"};
+const char* VEL_TOPIC {"/turtle1/cmd_vel"};
+const char* POSE_TOPIC {"/turtle1/pose"};
+const char* GOTO_SERVICE{"/goto"};
 const _Float32 LT {0.01};   // linear threshold
 const _Float32 pi_by_4{0.785398163};
 const _Float32 pi_by_2{pi_by_4 * 2};
 const _Float32 pi{pi_by_2 * 2};
 const _Float32 pi_2{pi * 2};
-const _Float32 AT {(_Float32) (1 * pi_by_4 / 45)};
+const _Float32 AT {(_Float32) (1 * pi_by_4 / 45)};  // angular threshold
+const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
 #define PITOPI 0
 #define ZEROTOPI 1
 
@@ -21,13 +25,47 @@ const _Float32 AT {(_Float32) (1 * pi_by_4 / 45)};
 // Global
 ros::Publisher vel_pub;
 ros::Subscriber pose_sub;
+ros::ServiceServer goto_srvr;
 ros::Duration* blink;
 #define BLINKDUR 1.0/200.0
 turtlesim::Pose cpos;
-geometry_msgs::Twist vel_msg, stop_msg;
+geometry_msgs::Twist vel_cmd, stop_cmd;
 int range_select;
-bool to_pub_vel{false}; // controls pub_vel_periodic()
-bool pose_updated{false}; // tells if position was updated from last time it was set to false
+bool to_pub_vel{false};     // controls pub_vel_periodic()
+bool pose_updated{false};   // tells if position was updated from last time it was set to false
+
+// CLASSES
+class NavParameters{
+    public:
+    _Float32 kpd;
+    _Float32 kpa;
+    _Float32 kid;
+    _Float32 kia;
+    _Float32 kdd;
+    _Float32 kda;
+    NavParameters(const _Float32& kpd, const _Float32& kpa, const _Float32& kid, const _Float32& kia, const _Float32& kdd, const _Float32& kda):kpd{kpd}, kpa{kpa}, kid{kid}, kia{kia}, kdd{kdd}, kda{kda}{
+    }
+    NavParameters(){
+    }
+}np; // global object, stores navigation parameters
+
+// PROTOTYPES
+// setups publishers, subscribers, durations, services of this node
+inline void setup();
+// deletes global objects from heap, wraps up this node
+inline void wrapup();
+// callback function for POSE_TOPIC
+void pose_callback(const turtlesim::Pose::ConstPtr& msg);
+// function to stop robot and thread running pub_vel_periodic()
+// tells whether given goal location is out of bounds or not
+bool is_out_of_bounds(const geometry_msgs::Point32& goal);
+void stop_robot();
+// waits for update on POSE_TOPIC
+void wait_for_update();
+// moves the robot towards goal location using PID control
+bool goto_goal(const geometry_msgs::Point32& tpos, const NavParameters& np, std::string& reason, bool log = false);
+// goto service handler
+bool goto_handler(roslearning::Goto::Request& req, roslearning::Goto::Response& res);
 
 // callback function for POSE_TOPIC
 void pose_callback(const turtlesim::Pose::ConstPtr& msg){
@@ -38,79 +76,72 @@ void pose_callback(const turtlesim::Pose::ConstPtr& msg){
     pose_updated = true;
 }
 
+// // tells whether given goal location is out of bounds or not
+bool is_out_of_bounds(const geometry_msgs::Point32& tpos){
+    return tpos.x > xylim2 || tpos.x < xylim1 || tpos.y > xylim2 || tpos.y < xylim1;
+}
+
 // function to stop robot and thread running pub_vel_periodic()
 void stop_robot(){
     to_pub_vel = false;
-    vel_msg = stop_msg;
-    vel_pub.publish(vel_msg);
+    vel_cmd = stop_cmd;
+    vel_pub.publish(vel_cmd);
     ros::spinOnce();
 }
 
 // wait for new update on POSE_TOPIC
 void wait_for_update(){
     pose_updated = false;
-    while(!pose_updated){
-        blink->sleep();
-        ros::spinOnce();
+    try{
+        while(!pose_updated){
+            blink->sleep();
+            ros::spinOnce();
+        }
     }
+    catch(ros::Exception& e){
+        ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+        ros::shutdown();
+    }
+    return;
 }
 
 // goes to specified position using proportional controller
-bool goto_goal(turtlesim::Pose tpos, _Float32 kpd, _Float32 kpa, _Float32 kid,
-              _Float32 kia, _Float32 kdd, _Float32 kda, bool log = false){
+bool goto_goal(const geometry_msgs::Point32& tpos, const NavParameters& np, std::string& reason, bool log){
     stop_robot();
     wait_for_update();
-    if(log){
-        ROS_INFO("[%s] Command recieved, goto %f %f %f", NODE_NAME,
-        tpos.x, tpos.y, tpos.theta);
-        std::cout << "Current pos:\n"
-                  << "x = " << cpos.x << " y = " << cpos.y << '\n'
-                  << "Enter any key to continue, abort to abort: ";
-        std::string choice;
-        std::getline(std::cin, choice);
-        if(choice == "abort"){
-            ROS_INFO("[%s] Command aborted by user!", NODE_NAME);
-            return false;
-        }
+    if(is_out_of_bounds(tpos)){
+        reason = "Goal location is out of bounds";
+        return false;
     }
-    // publish message at 50 Hz per second
+    if(log){
+        ROS_INFO("[%s] Command recieved, goto x= %f, y= %f", NODE_NAME,
+        tpos.x, tpos.y);
+        std::cout << "Current pos:\n"
+                  << "x = " << cpos.x << " y = " << cpos.y << '\n';
+    }
+    // publish message at 100 Hz per second
     ros::Rate loop_rate{100};
     _Float32 xE, yE, distE, angleE; // proportionality gain distance and angle
     _Float32 ICd{}, ICa{};
     xE = tpos.x - cpos.x;
-        yE = tpos.y - cpos.y;
-        distE = (_Float32)sqrt(xE * xE + yE * yE);
-        angleE = asin(yE/distE);
-        if(tpos.x < cpos.x){
-            if(angleE < 0)
-                angleE = -pi -angleE;
-            else
-                angleE = pi - angleE;
-        }
-        angleE -= cpos.theta;
-        if(angleE < -pi) angleE += pi_2;
-        else if(angleE > pi) angleE -= pi_2;
-    _Float32 distEp{distE}, angleEp{angleE}; // required for Derrivative control
+    yE = tpos.y - cpos.y;
+    distE = (_Float32)sqrt(xE * xE + yE * yE);
+    angleE = atan2(yE, xE);
+    angleE -= cpos.theta;
+    angleE = (angleE < -pi) ? angleE + pi_2 : ((angleE > pi) ? angleE - pi_2: angleE);
     do{
         xE = tpos.x - cpos.x;
         yE = tpos.y - cpos.y;
         distE = (_Float32)sqrt(xE * xE + yE * yE);
-        angleE = asin(yE/distE);
-        if(tpos.x < cpos.x){
-            if(angleE < 0)
-                angleE = -pi -angleE;
-            else
-                angleE = pi - angleE;
-        }
-        angleE -= cpos.theta;
-        if(angleE < -pi) angleE += pi_2;
-        else if(angleE > pi) angleE -= pi_2;
+        angleE = atan2(yE, xE) - cpos.theta;
+        angleE = (angleE < -pi) ? angleE + pi_2 : ((angleE > pi) ? angleE - pi_2 : angleE);
 
         // kick in integral control in last part of approach
         if(distE < 1)
-        ICd += (kid * distE * cos(angleE)); // integral controller
+        ICd += (np.kid * distE * cos(angleE)); // integral controller
+        // cos - to ensure to add raise integral control only if robot is headed in right direction
         if(angleE < 5 * pi_by_4 / 45)
-        ICa += (kia * angleE);
+        ICa += (np.kia * angleE);
         // capping integral controllers to they don't go out of control
         if(ICd > 2) ICd = 2;
         else if(ICd < -2) ICd = -2;
@@ -125,13 +156,11 @@ bool goto_goal(turtlesim::Pose tpos, _Float32 kpd, _Float32 kpa, _Float32 kid,
 
         // PI controller, the robot wouldn's slow down as much in final moments of approach
         // as a stable P controller would
-        vel_msg.linear.x = kpd * distE + ICd + kdd * (distE - distEp);
-        vel_msg.angular.z = kpa * angleE + ICa + kda * (angleEp - angleE);
+        vel_cmd.linear.x = np.kpd * distE + ICd - np.kdd * vel_cmd.linear.x;
+        vel_cmd.angular.z = np.kpa * angleE + ICa - np.kda * vel_cmd.angular.z;
         // angleEp - angleE since we want to oppose rapid change in error as you are approaching
         // your needed anglur orientation
-        distEp = distE;
-        angleEp = angleE;
-        vel_pub.publish(vel_msg);
+        vel_pub.publish(vel_cmd);
         ros::spinOnce();
         loop_rate.sleep();
     }while((distE > LT || angleE > AT) && ros::ok());
@@ -140,17 +169,42 @@ bool goto_goal(turtlesim::Pose tpos, _Float32 kpd, _Float32 kpa, _Float32 kid,
         ROS_INFO("[%s] goto command completed!", NODE_NAME);
         std::cout << "Current location: x = " << cpos.x << " y = " << cpos.y << '\n';
     }
+    reason = "Done!";
+    return true;
+}
+
+// GOTO_SERVICE handler
+bool goto_handler(roslearning::Goto::Request& req, roslearning::Goto::Response& res){
+    //
+    res.success = goto_goal(req.goal, np, res.reason, true);
     return true;
 }
 
 // setup the node
 inline void setup(int argc, char** argv){
-    std::cout << "Setting up node\n";
+    std::cout << "Setting up " << NODE_NAME << " node\n";
     ros::init(argc, argv, NODE_NAME);
+    // static so that NodeHandle won't be deleted until main returns
     static ros::NodeHandle node;
+    // setting up publishers
     vel_pub = node.advertise<geometry_msgs::Twist>(VEL_TOPIC, 1);
+    // setting up subscribers
     pose_sub = node.subscribe(POSE_TOPIC, 1, pose_callback);
+    // setting up services
+    goto_srvr = node.advertiseService(GOTO_SERVICE, goto_handler);
+
     blink = new ros::Duration(BLINKDUR);
+    bool success {ros::param::get("~kpd", np.kpd)};
+    if(success) success = ros::param::get("~kpa", np.kpa);
+    if(success) success = ros::param::get("~kid", np.kid);
+    if(success) success = ros::param::get("~kia", np.kia);
+    if(success) success = ros::param::get("~kdd", np.kdd);
+    if(success) success = ros::param::get("~kda", np.kda);
+    if(!success){
+        ROS_ERROR("\n[%s] FAILED TO RETRIEVE NAVIGATION PARAMETERS!\n", NODE_NAME);
+        ros::shutdown();
+        return;
+    }
     std::cout << "Node setup complete!\n";
 }
 
@@ -161,28 +215,9 @@ inline void wrapup(){
 
 // main driver
 int main(int argc, char** argv){
-    if(argc != 9){
-        std::cout << "Usage: " << argv[0] << " x, y, kpd, kpa, kid, kia, kdd, kda OR\n"
-                  << "Type recommeded to use recommended gain values\n";
-        return 1;
-    }
     setup(argc, argv);
-    turtlesim::Pose target;
-    target.x = (_Float32)atof(argv[1]);
-    target.y = (_Float32)atof(argv[2]);
-    _Float32 kpd, kpa, kid, kia, kdd, kda;
-    if(std::string{"recommended"} == std::string{argv[3]}){
-        // assign default values to all gains
-    }
-    else{
-        kpd = (_Float32)atof(argv[3]);
-        kpa = (_Float32)atof(argv[4]);
-        kid = (_Float32)atof(argv[4]);
-        kia = (_Float32)atof(argv[4]);
-        kdd = (_Float32)atof(argv[4]);
-        kda = (_Float32)atof(argv[4]);
-    }
-    goto_goal(target, kpd, kpa, kid, kia, kdd, kda, true);
+    ROS_INFO("[%s] run `rosservice call /goto \"goal:\n x: <float>\n y: <float>\"` to make the robot move to that location!\n", NODE_NAME);
+    ros::spin();
     wrapup();
     return 0;
 }

@@ -1,0 +1,22 @@
+<!-- Demonstartes goto node of this package which implements PID control to move the robot from it's current
+position to the goal position -->
+
+<launch>
+    <!-- ARGUMENTS FOR PID CONTROLLER -->
+    <arg name="kpd" default="1.3"/>
+    <arg name="kpa" default="2.3"/>
+    <arg name="kid" default="0.00000001"/>
+    <arg name="kia" default="0.0000008"/>
+    <arg name="kdd" default="0.8"/>
+    <arg name="kda" default="0.57"/>
+
+    <node name="turtlesim_node" type="turtlesim_node" pkg="turtlesim"/>
+    <node name="goto_node" type="goto" pkg="roslearning" output="screen">
+        <param name="kpd" value="$(arg kpd)" type="double"/>
+        <param name="kpa" value="$(arg kpa)" type="double"/>
+        <param name="kid" value="$(arg kid)" type="double"/>
+        <param name="kia" value="$(arg kia)" type="double"/>
+        <param name="kdd" value="$(arg kdd)" type="double"/>
+        <param name="kda" value="$(arg kda)" type="double"/>
+    </node>
+</launch>

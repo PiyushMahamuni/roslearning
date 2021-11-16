@@ -63,6 +63,7 @@ find_package(catkin REQUIRED COMPONENTS
    Move.srv
    Turn.srv
    TurnTo.srv
+   Goto.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -76,6 +77,7 @@ find_package(catkin REQUIRED COMPONENTS
  generate_messages(
    DEPENDENCIES
    std_msgs
+   geometry_msgs
  )
 
 ################################################
@@ -260,6 +262,7 @@ target_link_libraries(gotoN ${catkin_LIBRARIES})
 
 # goto [x, y, kpd, kpa, kid, kia, kdd, kda / or recommended to use recommended values]
 add_executable(goto src/Motion/Expert/03goto.cpp)
+add_dependencies(goto roslearning_generate_messages_cpp)
 target_link_libraries(goto ${catkin_LIBRARIES})
 
 # pLinController [x, m, kpd] // linear
