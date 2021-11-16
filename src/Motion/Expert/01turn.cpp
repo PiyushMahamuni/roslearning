@@ -6,21 +6,21 @@
 #include <math.h>
 #include <thread>
 #include <chrono>
+#include "roslearning/Turn.h"
 
 // CONSTANTS
-const char *NODE_NAME{"turtle_control"};
-const char *VEL_TOPIC{"turtle1/cmd_vel"};
-const char *POSE_TOPIC{"turtle1/pose"};
+const char *NODE_NAME{"turn_node"};
+const char *VEL_TOPIC{"/turtle1/cmd_vel"};
+const char *POSE_TOPIC{"/turtle1/pose"};
+const char *TURN_SERVICE{"turn"};
+
 #define VEL_PUB_FREQ 20.0
 const _Float32 pi_by_4{0.785398163};
 const _Float32 pi_by_2{pi_by_4 * 2};
 const _Float32 pi{pi_by_2 * 2};
 const _Float32 pi_2{pi * 2};
-const _Float32 LT{0.4};         // Linear threshold
 const _Float32 AT{5 * static_cast<_Float32>(pi_by_4/45.0)}; // 5 degrees in radians
-const _Float32 LLS {1.7};       // limiting linear speed (m/s)
 const _Float32 LAS {pi};      // limiting angular speed (rad/s)
-const _Float32 ALS{0.3}; // Treat as const, don't change value on your own
 const _Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
 const _Float32 blink_dur{1.0 / 200};
 const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
@@ -31,31 +31,46 @@ int range_select {};
 // GLOBALS
 ros::Publisher vel_pub;
 ros::Subscriber pose_sub;
+ros::ServiceServer turn_srvr;
 turtlesim::Pose cpos, tpos;
-geometry_msgs::Twist vel_msg, stop_msg;
+geometry_msgs::Twist vel_cmd, stop_cmd;
 ros::Duration *blink;
 bool updated_pose{false};
 bool to_pub_vel{false};
 
-// returns true if tpos.theta is out of limits
-bool is_crashing()
-{
-    return tpos.x > xylim2 || tpos.x < xylim1 || tpos.y > xylim2 || tpos.y < xylim1;
-}
 
-// function to call periodically to publish vel_msg on vel_topic
+// PROTOTYPES
+// publishes vel_cmd periodically, is meant to run on a seperate thread from main one
+void pub_vel_periodic();
+// callback function for pose_sub
+void pose_sub_callback(const turtlesim::Pose::ConstPtr& msg);
+// waits for new update on pose topic from the last time updated_pose global variable was set to false
+inline void wait_for_update();
+// stops the robot
+inline void stop_robot();
+// setup this node
+inline void setup();
+// wrapup this node
+inline void wrapup();
+// turns the robot through given radians angle with given ang speed (rad/s)
+void turn(_Float32 radians, _Float32 speed, bool log = false);
+// turn_srvr handler
+bool turn_handler(roslearning::Turn::Request& req, roslearning::Turn::Response& res);
+
+// function to call periodically to publish vel_cmd on vel_topic
 void pub_vel_periodic()
 {
     auto loop_idle_time = std::chrono::microseconds(static_cast<long long int>(1000000 * 1.0 / VEL_PUB_FREQ));
-    auto start = std::chrono::high_resolution_clock::now();
     u_int32_t count{0};
+    auto start = std::chrono::high_resolution_clock::now();
     while (to_pub_vel)
     {
-        vel_pub.publish(vel_msg);
+        vel_pub.publish(vel_cmd);
         ros::spinOnce();
         count++;
         std::this_thread::sleep_until(start + count * loop_idle_time);
     }
+    return;
 }
 
 // pose_sub callback functin
@@ -63,19 +78,23 @@ void pose_sub_callback(const turtlesim::Pose::ConstPtr &msg)
 {
     cpos.x = msg->x;
     cpos.y = msg->y;
-    if(range_select == PITOPI)
-        cpos.theta = msg->theta;
-    else
-        cpos.theta = (msg->theta < 0) ? (pi_2 + msg->theta) : msg->theta;
+    cpos.theta = (range_select == PITOPI)? msg->theta : ((msg->theta < 0) ? (pi_2 + msg->theta) : msg->theta);
     updated_pose = true;
+    return;
 }
 
 // wait for update on pose topic
 inline void wait_for_update(){
     updated_pose = false;
-    while(!updated_pose){
-        blink->sleep();
-        ros::spinOnce();
+    try{
+        while(!updated_pose){
+            blink->sleep();
+            ros::spinOnce();
+        }
+    }
+    catch(ros::Exception& e){
+        ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+        ros::shutdown();
     }
     return;
 }
@@ -84,15 +103,16 @@ inline void wait_for_update(){
 inline void stop_robot()
 {
     to_pub_vel = false;
-    vel_msg = stop_msg;
-    vel_pub.publish(vel_msg);
+    vel_cmd = stop_cmd;
+    vel_pub.publish(vel_cmd);
     ros::spinOnce();
+    return;
 }
 
 // setting up this node
 inline void setup(int argc, char **argv)
 {
-    std::cout << "Setting up node..." << std::endl;
+    std::cout << "Setting up " << NODE_NAME << " node..." << std::endl;
     // Initialize node
     ros::init(argc, argv, NODE_NAME);
     // Initialize node handle
@@ -101,15 +121,18 @@ inline void setup(int argc, char **argv)
     pose_sub = node.subscribe(POSE_TOPIC, 10, pose_sub_callback);
     // Initialize vel publisher
     vel_pub = node.advertise<geometry_msgs::Twist>(VEL_TOPIC, 1);
-    stop_msg.linear.x = 0;
-    stop_msg.linear.y = 0;
-    stop_msg.linear.z = 0;
-    stop_msg.angular.x = 0;
-    stop_msg.angular.y = 0;
-    stop_msg.angular.z = 0;
+    // Initialize service servers
+    turn_srvr = node.advertiseService(TURN_SERVICE, turn_handler);
+    stop_cmd.linear.x = 0;
+    stop_cmd.linear.y = 0;
+    stop_cmd.linear.z = 0;
+    stop_cmd.angular.x = 0;
+    stop_cmd.angular.y = 0;
+    stop_cmd.angular.z = 0;
     // setup blink duration
     blink = new ros::Duration(blink_dur);
     std::cout << "Setting up node complete..." << std::endl;
+    return;
 }
 
 // wrapping up the node
@@ -122,10 +145,15 @@ inline void wrapup()
     delete blink;
 }
 
+// turn_srvr service handler
+bool turn_handler(roslearning::Turn::Request& req, roslearning::Turn::Response& res){
+    turn(req.radians, req.speed, true);
+    return res.success = true;
+}
 
 // MOTION -------------------------------------------------------------------------------------------
 // turns robot by given amount of radians
-void turn(_Float32 radians, _Float32 speed, bool log = false){
+void turn(_Float32 radians, _Float32 speed, bool log){
     // make sure that robot has stopped
     stop_robot();
 
@@ -162,14 +190,7 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
     if(log){  
         ROS_INFO("[%s] Command recieved to make the robot turn %f radians with %f speed",
         NODE_NAME, radians, speed);
-        std::cout << "Current theta: " << cpos.theta << " Target theta: " << tpos.theta << std::endl
-                  << "Enter abort to abort, any key to continue: ";
-        std::string choice;
-        std::getline(std::cin, choice);
-        if(choice == "abort"){
-            ROS_INFO("[%s] Command aborted by user!", NODE_NAME);
-            return;
-        }
+        std::cout << "Current theta: " << cpos.theta << " Target theta: " << tpos.theta << std::endl;
     }
 
     // avoid conflicting speed and radians values
@@ -182,30 +203,22 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
         if(cpos.theta < 0) cpos.theta += pi_2;
     }
 
-    // start the thread to periodically publish vel_msg
-    std::thread th1{pub_vel_periodic};
+    // start the thread to periodically publish vel_cmd
     to_pub_vel = true;
+    std::thread th1{pub_vel_periodic};
     if(abs(radians) > AT){
         float sleep_time {(abs(radians) - AT)/abs(speed)};
         ros::Duration sleep{sleep_time};
         // Start turning the robot
-        vel_msg.angular.z = speed;
-        vel_pub.publish(vel_msg);
+        vel_cmd.angular.z = speed;
+        vel_pub.publish(vel_cmd);
         ros::spinOnce();
         sleep.sleep();  // turn radians - at angle withtou any feedback
     }
     // Final Moments
     // slow down for precision
-    if(speed > AAS){
-        vel_msg.angular.z = AAS;
-    }
-    else if(speed < -AAS){
-        vel_msg.angular.z = -AAS;
-    }
-    else{
-        vel_msg.angular.z = speed;
-    }
-    vel_pub.publish(vel_msg);
+    vel_cmd.angular.z = (speed > AAS) ? AAS : ((speed < -AAS) ? -AAS : speed);
+    vel_pub.publish(vel_cmd);
     ros::spinOnce();
     if(radians > 0){ // Turn counter clockwise
         // WHEN cpos.theta first becomes less that tpos.theta and then
@@ -234,13 +247,9 @@ void turn(_Float32 radians, _Float32 speed, bool log = false){
 
 int main(int argc, char **argv)
 {
-    if (argc != 3)
-    {
-        std::cout << "Usage: " << argv[0] << " [degrees] [speed]" << std::endl;
-        return 1;
-    }
     setup(argc, argv);
-    turn((_Float32)(atof(argv[1])*pi_by_4/45), (_Float32)(atof(argv[2])*pi_by_4/45), true);
+    ROS_INFO("[%s] USE `rosservice call /turn \"radians: <float>\nspeed: <float>\"` to make the robot turn", NODE_NAME);
+    ros::spin();
     wrapup();
     return 0;
 }

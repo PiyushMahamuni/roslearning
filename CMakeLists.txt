@@ -61,6 +61,9 @@ find_package(catkin REQUIRED COMPONENTS
    AddTwoInts.srv
    rec_area.srv
    Move.srv
+   Turn.srv
+   TurnTo.srv
+   Goto.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -74,6 +77,7 @@ find_package(catkin REQUIRED COMPONENTS
  generate_messages(
    DEPENDENCIES
    std_msgs
+   geometry_msgs
  )
 
 ################################################
@@ -244,10 +248,12 @@ target_link_libraries(move ${catkin_LIBRARIES})
 
 # turn [degrees]
 add_executable(turn src/Motion/Expert/01turn.cpp)
+add_dependencies(turn roslearning_generate_messages_cpp)
 target_link_libraries(turn ${catkin_LIBRARIES})
 
 # turnto [degrees]
 add_executable(turnto src/Motion/Expert/02turnto.cpp)
+add_dependencies(turnto roslearning_generate_messages_cpp)
 target_link_libraries(turnto ${catkin_LIBRARIES})
 
 # gotoN [x, y, kpd, kpa]
@@ -256,6 +262,7 @@ target_link_libraries(gotoN ${catkin_LIBRARIES})
 
 # goto [x, y, kpd, kpa, kid, kia, kdd, kda / or recommended to use recommended values]
 add_executable(goto src/Motion/Expert/03goto.cpp)
+add_dependencies(goto roslearning_generate_messages_cpp)
 target_link_libraries(goto ${catkin_LIBRARIES})
 
 # pLinController [x, m, kpd] // linear
