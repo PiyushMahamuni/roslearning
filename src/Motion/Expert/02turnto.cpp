@@ -52,7 +52,7 @@ inline void wait_for_update();
 // stops the robot, also stops causes pub_vel_periodic to return
 inline void stop_robot();
 // turns the robot through given radians with given speed (rad/s)
-void turn(_Float32 radians, _Flaot32 speed);
+void turn(_Float32 radians, _Float32 speed);
 // turns the robot facing to a specific angle (in radians) with given speed (rad/s)
 void turntor(_Float32 radians, _Float32 speed, bool log = false);
 // turnto_srvr handler
@@ -80,7 +80,7 @@ void pose_sub_callback(const turtlesim::Pose::ConstPtr &msg)
 {
     cpos.x = msg->x;
     cpos.y = msg->y;
-    cpost.theta = (range_select == PITOPI) ? msg->theta : ((msg->theta < 0) ? (pi_2 + msg->theta) : msg->theta);
+    cpos.theta = (range_select == PITOPI) ? msg->theta : ((msg->theta < 0) ? (pi_2 + msg->theta) : msg->theta);
     updated_pose = true;
     return;
 }
@@ -265,7 +265,7 @@ void turntor(_Float32 radians, _Float32 speed, bool log){
 int main(int argc, char **argv)
 {
     setup(argc, argv);
-    ROS_INFO("[%s] Run `rosservice call /turnto \"radians: <float>\nspeed: <float>\"` to make the robot move to specific radian angle");
+    ROS_INFO("[%s] Run `rosservice call /turnto \"radians: <float>\nspeed: <float>\"` to make the robot move to specific radian angle", NODE_NAME);
     ros::spin();
     wrapup();
     return 0;
