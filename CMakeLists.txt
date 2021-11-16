@@ -251,6 +251,7 @@ target_link_libraries(turn ${catkin_LIBRARIES})
 
 # turnto [degrees]
 add_executable(turnto src/Motion/Expert/02turnto.cpp)
+add_dependencies(turnto roslearning_generate_messages_cpp)
 target_link_libraries(turnto ${catkin_LIBRARIES})
 
 # gotoN [x, y, kpd, kpa]

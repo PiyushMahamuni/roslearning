@@ -1,3 +1,4 @@
 float32 radians
+float32 speed
 ---
 bool success
