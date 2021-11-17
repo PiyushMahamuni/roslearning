@@ -16,21 +16,13 @@ const char *MOVE_TOPIC{"/move"};
 
 #define VEL_PUB_FREQ 20.0
 const _Float32 pi_by_4{0.785398163};
-const _Float32 pi_by_2{pi_by_4 * 2};
-const _Float32 pi{pi_by_2 * 2};
-const _Float32 pi_2{pi * 2};
 const _Float32 LT{0.5};     // Linear threshold
-const _Float32 AT{5 * static_cast<_Float32>(pi_by_4/45.0)}; // 5 degrees in radians
 const _Float32 LLS {1.7};   // limiting linear speed (m/s)
-const _Float32 LAS {pi};    // limiting angular speed (rad/s)
 const _Float32 ALS {0.2};   // Treat as const, don't change value on your own
-const _Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
 // approaching angular and linear speeds
 const _Float32 blink_dur{1.0 / 200};
 const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
-int range_select {};
-#define PITOPI 0
-#define ZEROTO2PI 1
+
 
 // GLOBALS
 ros::Publisher vel_pub;
@@ -60,7 +52,7 @@ inline void stop_robot();
 // move service handler
 bool handle_move(roslearning::Move::Request& req, roslearning::Move::Response& res);
 // moves the robot through given distance with given speed
-bool move(float distance, float speed, std::string* reason = nullptr, bool log = false);
+bool move(float distance, float speed, std::string& reason, bool log = false);
 // moves the robot forward through given distance with given speed
 inline void forward(const _Float32& dist, const _Float32& speed, bool log = false);
 // moves the robot backward through given distance with given speed
@@ -94,20 +86,22 @@ void pose_sub_callback(const turtlesim::Pose::ConstPtr &msg)
 {
     cpos.x = msg->x;
     cpos.y = msg->y;
-    if(range_select == PITOPI)
-        cpos.theta = msg->theta;
-    else
-        cpos.theta = (msg->theta < 0) ? (pi_2 + msg->theta) : msg->theta;
-    updated_pose = true;
+    cpos.theta = msg->theta;
     return;
 }
 
 // wait for update on pose topic
 inline void wait_for_update(){
     updated_pose = false;
-    while(!updated_pose){
-        blink->sleep();
-        ros::spinOnce();
+    try{
+        while(!updated_pose){
+            blink->sleep();
+            ros::spinOnce();
+        }
+    }
+    catch(ros::Exception& e){
+        ROS_INFO("[%s] Exception: %s", NODE_NAME, e.what());
+        ros::shutdown();
     }
     return;
 }
@@ -125,7 +119,7 @@ inline void stop_robot()
 // move service handler
 bool handle_move(roslearning::Move::Request& req, roslearning::Move::Response& res){
     wait_for_update();
-    res.success = move(req.distance, req.speed, &res.reason, true);
+    res.success = move(req.distance, req.speed, res.reason, true);
     return true;
     // the res.success response will tell if the operation was unsuccessful, don't need to
     // respong with an error: b'' with rosservice APIs, hence always returning true
@@ -173,23 +167,23 @@ inline void wrapup()
 
 // MOTION -------------------------------------------------------------------------------------------
 // move function
-bool move(_Float32 distance, _Float32 speed, std::string* reason, bool log)
+bool move(_Float32 distance, _Float32 speed, std::string& reason, bool log)
 {   
     // make sure that robot is stopped
-    *reason = "Done!";
+    reason = "Done!";
     stop_robot();
     if((speed = abs(speed)) == 0){
-        *reason = "Invalid Linear Speed";
+        reason = "Invalid Linear Speed";
         ROS_ERROR("[%s] Invalid linear speed! Aborting operation", NODE_NAME);
         return false;
     }
     else if(speed > LLS){
-        *reason = "speed > Limiting Speed";
+        reason = "speed > Limiting Speed";
         ROS_INFO("[%s] Requested speed is greater than limiting [%f] speed", NODE_NAME, LLS);
         return false;
     }
     else if(distance == 0){
-        *reason = "distance is 0.0";
+        reason = "distance is 0.0";
         ROS_INFO("[%s] distance to move through is 0!", NODE_NAME);
         return true;
     }
@@ -201,7 +195,7 @@ bool move(_Float32 distance, _Float32 speed, std::string* reason, bool log)
 
     if (is_crashing())
     {
-        *reason = "Robot will run into wall";
+        reason = "Robot will run into wall";
         ROS_INFO("[%s] Invalid Operation, robot will run into wall!", NODE_NAME);
         return false;
     }
