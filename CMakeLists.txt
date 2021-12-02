@@ -11,7 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  message_generation
+  message_generation  # needed to generate .srv, .msg, .action msgs
+  actionlib_msgs      # needed for .action msgs
   cv_bridge
   image_transport
   tf
@@ -67,16 +68,16 @@ find_package(catkin REQUIRED COMPONENTS
  )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+add_action_files(
+  FILES
+  Fibonacci.action
+)
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
    std_msgs
+   actionlib_msgs
    geometry_msgs
  )
 
@@ -112,7 +113,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
  INCLUDE_DIRS include
   LIBRARIES roslearning
-  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime actionlib_msgs
 #  DEPENDS system_lib
 )
 
@@ -311,3 +312,14 @@ target_link_libraries(bridgingOpencvROS ${OpenCV_LIBRARIES})
 # Transformation broadcaster
 add_executable(_05Transformation_Broadcaster src/TF/_05Transformation_Broadcaster.cpp)
 target_link_libraries(_05Transformation_Broadcaster ${catkin_LIBRARIES})
+
+
+# Fibonacci Action Server cpp
+add_executable(fibonacci_server src/Action_Library/fibonacci_server.cpp)
+target_link_libraries(fibonacci_server ${catkin_LIBRARIES})
+add_dependencies(fibonacci_server ${roslearning_EXPORTED_TARGETS})
+
+# Fibonacci Actio client cpp
+add_executable(fibonacci_client src/Action_Library/fibonacci_client.cpp)
+target_link_libraries(fibonacci_client ${catkin_LIBRARIES})
+add_dependencies(fibonacci_client ${roslearning_EXPORTED_TARGETS})
