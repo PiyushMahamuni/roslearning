@@ -15,15 +15,13 @@ const char *POSE_TOPIC{"/turtle1/pose"};
 const char *TURN_SERVICE{"turn"};
 
 #define VEL_PUB_FREQ 20.0
-const _Float32 pi_by_4{0.785398163};
-const _Float32 pi_by_2{pi_by_4 * 2};
-const _Float32 pi{pi_by_2 * 2};
+const _Float32 pi{3.141592654};
+const _Float32 pi_by_4{pi / 4};
 const _Float32 pi_2{pi * 2};
-const _Float32 AT{5 * static_cast<_Float32>(pi_by_4/45.0)}; // 5 degrees in radians
+const _Float32 AT{5 * static_cast<_Float32>(pi/36.0)}; // 5 degrees in radians
 const _Float32 LAS {pi};      // limiting angular speed (rad/s)
-const _Float32 AAS {static_cast<_Float32>(15 * pi_by_4 / 45)};
-const _Float32 blink_dur{1.0 / 200};
-const _Float32 xylim1{0.3}, xylim2{11 - xylim1};
+const _Float32 AAS {static_cast<_Float32>(15 * pi / 180)};
+const _Float32 blink_dur{1.0 / 200.0};
 int range_select {};
 #define PITOPI 0
 #define ZEROTO2PI 1
